@@ -5,7 +5,12 @@ from typing import *
 
 from ..com import WorkDir
 
-from .abstract_config import AbstractConfig, coerce_enum, coerce_size
+from .abstract_config import (
+    AbstractConfig,
+    coerce_enum,
+    coerce_size,
+    coerce_str_list,
+)
 from .package_manager import get_shared_pypaths
 
 
@@ -28,7 +33,7 @@ class CloudFunctionCFG(dict):
 
     @property
     def project_paths(self) -> List[str]:
-        return self.setdefault(self._key_project_paths, list())
+        return coerce_str_list(self.setdefault(self._key_project_paths, []))
 
     @project_paths.setter
     def project_paths(self, value):
@@ -132,7 +137,7 @@ class CloudFunctionCFG(dict):
 
     @property
     def excluded_paths(self) -> List[str]:
-        return self.setdefault(self._key_excluded_paths, [])
+        return coerce_str_list(self.setdefault(self._key_excluded_paths, []))
 
     @excluded_paths.setter
     def excluded_paths(self, value):

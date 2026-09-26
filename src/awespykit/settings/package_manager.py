@@ -4,7 +4,7 @@ from typing import Iterable, Sequence
 
 from ..com import *
 
-from .abstract_config import AbstractConfig, coerce_size, coerce_enum
+from .abstract_config import AbstractConfig, coerce_str_list, coerce_size, coerce_enum
 
 _shared_saved_pypaths = None
 
@@ -45,7 +45,7 @@ class PackageManagerConfig(AbstractConfig):
     def pypaths(self) -> list:
         if self._key_python_paths not in self:
             self[self._key_python_paths] = list()
-        return self[self._key_python_paths]
+        return coerce_str_list(self[self._key_python_paths])
 
     @pypaths.setter
     def pypaths(self, value: Iterable):

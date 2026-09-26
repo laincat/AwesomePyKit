@@ -51,6 +51,23 @@ def coerce_enum(value, enum_cls, default):
         return default
 
 
+def coerce_str_list(value, default=None):
+    """把配置里的字符串列表还原成 list[str]。
+
+    配置被手工改坏或版本升级后，字段可能是字符串（'a,b' 或 '/path'）、
+    含非字符串元素的列表、None 等。若直接返回，调用方遍历时会按字符拆开
+    （'abc' 会变成 'a','b','c'），或在拼接路径时抛 TypeError。
+    """
+    if default is None:
+        default = []
+    if isinstance(value, str):
+        # 单个字符串按一行一项处理；空串视为空列表
+        return [value] if value else []
+    if isinstance(value, (list, tuple)):
+        return [str(item) for item in value if isinstance(item, str)]
+    return list(default)
+
+
 def coerce_size(value, default):
     """把配置里读出来的窗口尺寸还原成 (宽, 高) 整数元组。
 
@@ -60,9 +77,13 @@ def coerce_size(value, default):
     """
     try:
         width, height = value
-        return int(width), int(height)
+        width, height = int(width), int(height)
     except (TypeError, ValueError):
         return tuple(default)
+    # 非正数的窗口尺寸对 Qt 没有意义，多半是配置被改坏；回退到默认值
+    if width <= 0 or height <= 0:
+        return tuple(default)
+    return width, height
 
 
 class AbstractConfig(dict):

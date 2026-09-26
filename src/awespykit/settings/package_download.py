@@ -2,7 +2,7 @@
 
 from typing import Sequence
 
-from .abstract_config import AbstractConfig, coerce_size
+from .abstract_config import AbstractConfig, coerce_str_list, coerce_size
 from .package_manager import get_shared_pypaths
 
 
@@ -34,7 +34,7 @@ class PackageDownloadConfig(AbstractConfig):
     def package_names(self):
         if self._key_package_names not in self:
             self[self._key_package_names] = list()
-        return self[self._key_package_names]
+        return coerce_str_list(self[self._key_package_names])
 
     @package_names.setter
     def package_names(self, value):
@@ -116,7 +116,7 @@ class PackageDownloadConfig(AbstractConfig):
     def platform(self):
         if self._key_platform not in self:
             self[self._key_platform] = list()
-        return self[self._key_platform]
+        return coerce_str_list(self[self._key_platform])
 
     @platform.setter
     def platform(self, value):
@@ -149,7 +149,7 @@ class PackageDownloadConfig(AbstractConfig):
     def abis(self):
         if self._key_abis not in self:
             self[self._key_abis] = list()
-        return self[self._key_abis]
+        return coerce_str_list(self[self._key_abis])
 
     @abis.setter
     def abis(self, value):

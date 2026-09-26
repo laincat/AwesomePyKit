@@ -44,7 +44,12 @@ class MainEntranceConfig(AbstractConfig):
 
     @property
     def selected_thm(self):
-        return self.setdefault(self._key_selected_theme, -1)
+        value = self.setdefault(self._key_selected_theme, -1)
+        # 主题索引必须是整数；配置被改坏时回退到 -1（表示使用默认主题）
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return -1
 
     @selected_thm.setter
     def selected_thm(self, value):
