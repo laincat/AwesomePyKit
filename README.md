@@ -2,137 +2,197 @@
 
 <h1>Python 工具箱 - Awespykit</h1>
 
-![GitHub stars](https://img.shields.io/github/stars/hrpzcf/AwesomePyKit?style=flat)
-![GitHub forks](https://img.shields.io/github/forks/hrpzcf/AwesomePyKit?style=flat)
-![GitHub issues](https://img.shields.io/github/issues/hrpzcf/AwesomePyKit)
-![GitHub license](https://img.shields.io/github/license/hrpzcf/AwesomePyKit)
-![GitHub release](https://img.shields.io/github/v/release/hrpzcf/AwesomePyKit)
-![PyPI Release](https://img.shields.io/pypi/v/Awespykit?label=PyPi)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/Awespykit?label=Python)
-![PyPI - Wheel](https://img.shields.io/pypi/wheel/Awespykit?label=Wheel)
+![GitHub stars](https://img.shields.io/github/stars/laincat/AwesomePyKit?style=flat)
+![GitHub forks](https://img.shields.io/github/forks/laincat/AwesomePyKit?style=flat)
+![GitHub issues](https://img.shields.io/github/issues/laincat/AwesomePyKit)
+![GitHub license](https://img.shields.io/github/license/laincat/AwesomePyKit)
+![GitHub release](https://img.shields.io/github/v/release/laincat/AwesomePyKit)
 
 </div>
 
-## 快速跳转
+[程序简介](#程序简介) · [下载安装](#下载安装) · [功能说明](#功能说明) · [常见问题](#常见问题) · [开发与贡献](#开发与贡献)
 
-[程序简介](#程序简介) **·** [如何安装和运行](#如何安装和运行) **·** [程序截图](#程序截图) **·** [源码仓库](#源码仓库)
-
-<br />
+---
 
 ## 程序简介
 
-这是一个关于 Python 的工具箱，有包管理器、程序打包工具、镜像源设置工具、模块安装包下载器可用。
+一个面向 Windows 的 Python 工具箱，把平时要在命令行里折腾的事情做成图形界面：
 
-`注：仅支持在 Windows 系统上使用`
+- **包管理器** —— 管理多个 Python 环境里的包（安装、卸载、升级）
+- **程序打包工具** —— 把 Python 程序打包成 exe
+- **镜像源设置工具** —— 一键切换 pip 镜像源
+- **模块安装包下载器** —— 下载包及其依赖的安装文件
+- **云函数部署包打包工具** —— 生成云函数部署用的 zip
 
-<br />
-
-## 如何安装和运行
-
-> #### 安装 Python 分发包后运行（推荐）
-
-1. 假设你的计算机已经安装了 Python 环境，且版本 >=3.7（如果不符合要求则不能使用这个方法安装 Awespykit）。
-2. 使用 pip 命令安装 Awespykit：`pip install Awespykit -U`（有多个环境的请自行选择安装环境）。
-3. 安装完成后，即可在命令行窗口输入 `rpk` 启动 Awespykit。
-4. 如果输入 `pip` 命令或 `rpk` 命令出现提示：`xxx 不是内部或外部命令，也不是可运行的程序或批处理文件。`
-   或者`无法将 xxx 项识别为 cmdlet、函数、脚本文件或可运行程序的名称。`等提示，则说明你的 Python
-   环境的路径尚未加入到系统环境变量的 PATH 变量中，请自行添加。
-
-`推荐原因：程序开发者经常与各种命令窗口打交道，直接在命令窗口输入 'rpk + 回车' 是运行 Awespykit 最快捷的方式。`
-
-`需要注意的是：当通过以上方式安装的 Awespykit 或者是通过源代码运行 Awespykit 时，请勿使用 Awespykit 安装、卸载、升级 Awespykit 所在 Python 环境的 Awespykit 自己(包括 Awespykit 的依赖 PyQt5)，否则可能造成文件残留或者 Awespykit 意外退出。运行打包好的 Awespykit(从 Awespykit.exe 或 runpykit.exe 文件运行) 则没有这些限制。`
-
-<br/>
-
-> #### 下载源代码并从源代码运行：
-
-1. 假设你的计算机已经安装了 Python 环境，且版本 >=3.7。
-2. `git clone` 克隆源代码到你的计算机(需要计算机上已经安装了 git)或下载源代码包 Source code.zip 解压。
-3. 在 Awespykit 目录内打开 PowerShell 或 Cmd。
-4. 使用以下命令安装 Awespykit 的依赖，有多个 Python 环境的请自行选择环境：
-   ```cmd
-   pip install -r requirements.txt
-   ```
-5. 找到 runpykit.py 运行。如果不想显示控制台，可以将 runpykit.py 重命名为 runpykit.pyw。
-6. *注意*：由于更改了项目目录结构，使用 Pycharm 的同学，Pycharm 打开 Awespykit 目录后，请右键 Awespykit
-   -> src -> awespykit 目录，选择菜单末尾的 `将目录标记为->源代码根目录` 把 `awespykit`
-   目录标记为源码根目录，否则影响编程体验。
-
-<br />
-
-> #### 使用 pip 命令从 GitHub 安装开发版
-
-1. 假设你的计算机已经安装了 Python 环境，且版本 >=3.7（如果不符合要求则不能使用这个方法）。
-2. 使用以下命令安装开发版（可能需要你的计算机上已经安装了 git）：
-   ```cmd
-   pip install git+https://github.com/hrpzcf/AwesomePyKit.git@main
-   ```
-注意：开发版可能含有许多 BUG，无法保证程序一定能正常运行，也无法保证所有功能都正常。
-
-<br />
-
-## 程序截图
-
-> ### 工具箱启动窗口
+启动后的主界面：
 
 ![启动窗口](img/MainEntrance.png)
 
-<br/>
+> 仅支持 Windows 系统。
 
-> ### 包管理器：封装了 pip 命令
+---
 
-- 提供多 Python 环境的包管理，免于用命令行管理的混乱
-    + 支持常规 Python 环境
-    + 支持 venv 虚拟环境
-    + 支持 Anaconda 主环境、虚拟环境
-- 支持批量安装模块、按版本号安装等
-- 支持检查更新、批量卸载、批量升级(不了解各包的互相依赖则请慎用批量功能)
+## 下载安装
+
+### 方式一：直接运行 exe（推荐，不需要装 Python）
+
+到 [Releases 页面](https://github.com/laincat/AwesomePyKit/releases) 下载 `Awespykit.exe`，双击即可运行。
+
+想固定一个永远指向最新版的下载地址，可以用：
+
+```
+https://github.com/laincat/AwesomePyKit/releases/download/dev-latest/Awespykit.exe
+```
+
+> 这个地址指向的是跟着 `main` 分支自动构建的开发版，可能包含尚未充分验证的改动。
+> 想要稳定版本请到 Releases 页面下载带版本号的那一份。
+
+### 方式二：pip 安装
+
+> **先说结论：不能直接用 `pip install Awespykit`。**
+>
+> PyPI 上的 `Awespykit` 是原作者发布的，目前只到 **2.1.0**，不包含本仓库的修复。
+> 本仓库的版本要从下面两个地址装。
+
+**装最新版**（地址固定，不需要改）：
+
+```cmd
+pip install git+https://github.com/laincat/AwesomePyKit.git@main
+```
+
+需要已安装 git。这是唯一一个「地址永远不变、内容永远是最新」的安装方式 ——
+因为它直接从仓库源码构建，而不是从附件下载。
+
+**装指定版本**（不需要 git）：
+
+```cmd
+pip install https://github.com/laincat/AwesomePyKit/releases/download/2.2.0/awespykit-2.2.0-py3-none-any.whl
+```
+
+这个地址里带版本号，升级到新版本时需要把 `2.2.0` 换成新版本号 —— 到
+[Releases 页面](https://github.com/laincat/AwesomePyKit/releases) 找到对应版本，
+右键复制 `awespykit-*.whl` 的链接即可。
+
+> 为什么没有「永久指向最新 wheel」的地址：pip 要求 wheel 文件名里必须包含版本号，
+> 所以附件名无法固定。这一点是 pip 的限制，不是本仓库的选择。
+
+两种方式都会由 pip 自动安装好依赖（PyQt5、fastpip、pywin32 等）。
+
+安装完成后，在命令行输入 `rpk` 即可启动。如果提示 `rpk 不是内部或外部命令`，
+说明 Python 的 Scripts 目录没在 PATH 里，请自行添加，或用 `python -m awespykit` 启动。
+
+> **注意**：用 pip 安装或从源码运行时，不要用 Awespykit 去卸载或升级它自己所在的
+> Python 环境里的 Awespykit、PyQt5，否则可能造成文件残留或程序意外退出。
+> 直接运行 exe 没有这个限制。
+
+### 方式三：从源码运行
+
+```cmd
+git clone https://github.com/laincat/AwesomePyKit.git
+cd AwesomePyKit
+pip install -r requirements.txt
+python src\awespykit\runpykit.py
+```
+
+注意：`pip install -r requirements.txt` 会把依赖装进你当前使用的 Python 环境。
+如果不想污染现有环境，建议先建一个虚拟环境再执行。
+
+用 PyCharm 打开项目时，请右键 `src` -> `awespykit` 目录，选择
+「将目录标记为 -> 源代码根目录」，否则导入提示会有误报。
+
+---
+
+## 功能说明
+
+### 包管理器
+
+封装了 pip 命令，用图形界面管理多个 Python 环境里的包。
+
+- 支持常规 Python 环境、venv 虚拟环境、Anaconda 主环境与虚拟环境
+- 批量安装、按版本号安装、检查更新、批量卸载、批量升级
+- 右键环境可打开目录、复制路径、导出包列表（requirements.txt）
+- 右键包可升级、卸载、强制重装、查询导入名
+
+> 批量升级/卸载前请确认了解各包之间的依赖关系，以免破坏环境。
 
 ![包管理器](img/PackageManager.png)
 
-<br/>
+### 程序打包工具
 
-> ### 程序打包工具：封装了 Pyinstaller
+封装了 PyInstaller 的常用命令。
 
-- 封装了 Pyinstaller 的大部分常用命令
-- 支持选择不同的环境进行打包操作
-- 支持一键在项目下创建 venv 虚拟环境
-- 支持项目所使用的 Python 环境的检查，检查出未安装的模块可一键安装
+- 支持选择不同环境进行打包，可在项目下创建 venv 虚拟环境
+- 打包前检查项目所用模块在环境中的安装情况，缺什么可一键安装
+- 支持多套配置的保存与应用；支持自定义版本信息、图标、UPX 等
 
 ![程序打包工具](img/PyinstallerTool.png)
 
-<br/>
+### 镜像源设置工具
 
-> ### 镜像源设置工具：封装了 pip 命令
-
-- 使用 pip 时网络不佳，用此工具一键切换 pip 所使用的镜像源
-- 支持保存你自己常用的镜像源地址
+一键切换 pip 使用的镜像源，支持保存自己常用的镜像源地址。
 
 ![镜像源设置工具](img/IndexUrlTool.png)
 
-<br/>
+### 模块安装包下载器
 
-> ### 模块安装包下载器：封装了 pip 命令
+下载包及其依赖的安装文件（.whl / .tar.gz），适合离线安装或分发。
 
-- 用于特殊需求时下载各个包/库/模块的安装包
-- 支持同时下载要下载的包/库/模块的依赖
-- 支持从 requirement.txt 批量读取并一键下载
+- 支持从 requirements.txt 批量读取
+- 支持指定平台、Python 版本、解释器实现、ABI 等兼容条件
 
 ![模块安装包下载器](img/PackageDownloader.png)
 
-<br/>
+### 云函数部署包打包工具
 
-## 源码仓库
+把云函数项目连同依赖打包成可上传的 zip 部署包，可配置排除文件。
 
-> [Gitee](https://gitee.com/hrpzcf/AwesomePyKit) / [GitHub](https://github.com/hrpzcf/AwesomePyKit)
+---
 
-<br/>
+## 常见问题
 
-## 任务列表
+**Q：双击 exe 没反应？**
 
-[可能会添加或删除的功能](./TODO.md)
+新版本会在依赖版本不符时弹出对话框说明原因。如果完全没有窗口出现，请确认：
+- 下载的 exe 是否完整（对照 `Awespykit.exe.sha256` 校验）
+- 是否被杀毒软件拦截（单文件打包的程序偶尔会被误报，可加入白名单）
 
-<br/>
+校验下载文件（PowerShell）：
+
+```powershell
+Get-FileHash .\Awespykit.exe -Algorithm SHA256
+```
+
+**Q：`pip install Awespykit` 装到的不是这个版本？**
+
+是的，PyPI 上的包名由原作者持有，本仓库的版本要用[方式二](#方式二pip-安装)里的地址安装。
+
+**Q：提示缺少模块 / 导入失败？**
+
+用包管理器或打包工具时若提示某模块未安装，按提示安装即可。
+如果提示的是 `fastpip` 版本不符，按弹窗里的命令升级。
+
+**Q：配置文件存放在哪里？**
+
+`%LOCALAPPDATA%\Awespykit`（配置在 `config` 子目录，自定义主题放 `themes` 子目录）。
+卸载程序不会删除这个目录，需要清理可手动删除。
+
+---
+
+## 关于本项目
+
+本仓库是 [hrpzcf/AwesomePyKit](https://github.com/hrpzcf/AwesomePyKit) 的延续。
+原作者自 2024 年 10 月起没有再更新，本仓库在其基础上继续维护。
+
+与原版相比，本仓库的主要差别：
+
+- 修复了一批会在使用中真实碰到的问题，详见各版本的 Release 说明
+- 包内导入规范化，不再依赖 sys.path 的注入顺序
+- 加入 CI（多 Python 版本测试 + exe 构建冒烟测试）与自动发布
+- 支持三种启动方式：rpk 命令、python -m awespykit、直接运行脚本
+
+界面布局与操作方式保持原样，原有的配置文件可以直接继续使用。
+
+**授权**：沿用原项目的 [GPL-3.0](./LICENSE) 许可，作者署名保留原样。
 
 ---
 
@@ -147,45 +207,58 @@ pip install -r requirements-dev.txt
 ### 常用命令
 
 ```cmd
-ruff check src/ tests/ packaging/        :: 静态检查
-python -m pytest tests                   :: 测试（含无头冒烟测试，不需要显示器）
-python -m build --outdir dist-python     :: 构建 pip 分发包
-python packaging/make_version_info.py    :: 生成 exe 的版本信息文件
-python -m PyInstaller --noconfirm packaging/awespykit.spec   :: 构建单文件 exe
+ruff check src/ tests/ packaging/      :: 静态检查
+python -m pytest tests                 :: 测试（无头运行，不需要显示器）
+python -m build --outdir dist-python   :: 构建 pip 分发包
+python packaging/make_version_info.py  :: 生成 exe 的版本信息
+python -m PyInstaller --noconfirm packaging/awespykit.spec   :: 构建 exe
 ```
 
-测试与 CI 都是无头运行的（QT_QPA_PLATFORM=offscreen），所以在没有图形界面的
-环境（CI、远程终端）里也能跑。
+测试与 CI 都通过 `QT_QPA_PLATFORM=offscreen` 无头运行，因此在没有图形界面的环境
+（CI、远程终端）里也能跑。
+
+### 项目结构
+
+```
+src/awespykit/
+    runpykit.py      程序入口（同时支持 rpk 命令、python -m awespykit、直接运行脚本）
+    __info__.py      版本号等基本信息
+    com/             通用组件：枚举、自定义控件、线程封装、导入名对照表
+    logic/           各功能窗口的逻辑
+    settings/        配置读写（JSON，带类型还原与容错）
+    ui/              由 Qt Designer 生成的界面代码，请勿手工修改
+    utils/           工具：打包、虚拟环境、导入检查、主题
+    res/             图标、样式表等资源（res.py 由 res.qrc 生成，请勿手工修改）
+packaging/           PyInstaller 配置与发布辅助脚本
+tests/               测试
+```
 
 ### 发布流程
 
-发布不需要在本地打包，也不需要手工上传文件。产物由 GitHub Actions 自动构建，
-分两种：
+不需要本地打包，产物由 GitHub Actions 自动构建，分两种：
 
-**开发版**：每次推送到 `main` 分支都会自动构建并发布，版本号由 git 提交历史
-推导（形如 `2.1.1.dev8`）。它挂在固定的 tag `dev-latest` 下，每轮构建覆盖同名
-附件，所以下载地址恒定不变：
+**开发版** —— 每次推送到 `main` 都自动构建并发布，版本号由 git 提交历史推导
+（形如 `2.2.1.dev3`）。它挂在固定的 tag `dev-latest` 下，每轮覆盖同名附件，
+所以下载地址恒定不变：
 
 ```
 https://github.com/laincat/AwesomePyKit/releases/download/dev-latest/Awespykit.exe
 ```
 
-开发版会标记为 Pre-release，且不会占用 `releases/latest` —— 那个位置留给正式
-发版。开发版只保证「能构建、能启动」，要稳定版本请用下面这种方式。
+开发版会标记为 Pre-release，也不会占用 `releases/latest` —— 那个位置留给正式发版。
 
-**正式发版**：在 GitHub 上创建一个 release（打 tag）即可，产物附件会补到那一条
-release 上。标签需要是合法的版本号，例如 `v2.1.2`、`v2.1.2-rc1`；工作流会先把
-标签规范化为 PEP 440 版本号，若无法转换（例如 `v2.1.1-test`）会在第一步就明确
-报错并指出原因。
+**正式发版** —— 在 GitHub 上创建 release（打 tag）即可，产物附件会补到那一条 release 上。
+标签需要是合法的版本号，例如 `v2.3.0`、`v2.3.0-rc1`；工作流会先把标签规范化为
+PEP 440 版本号，无法转换时会在第一步就明确报错指出问题。
 
-两种方式都会构建 sdist 与 wheel、构建 Windows 单文件 exe 并启动它做冒烟测试、
-计算全部产物的 SHA256 校验和，然后一并上传。
+两种方式都会：构建 sdist 与 wheel → 构建 Windows 单文件 exe 并启动它做冒烟测试
+→ 计算全部产物的 SHA256 → 上传附件。
 
-**只构建不发布**：手动触发该工作流（`workflow_dispatch`）即可，产物只留在
-Actions 的 artifact 里（保留 14 天）。
+只想验证打包配置、不发布时，手动触发工作流（`workflow_dispatch`）即可，
+产物只留在 Actions 的 artifact 里（保留 14 天）。
 
 ### 依赖自动更新
 
-Dependabot 每周检查 requirements*.txt 与 workflow 里引用的 Action。patch 级
-更新会在 CI 通过后自动合并；minor 与 major 会留给人看，因为这个项目要把 exe
-发给真实用户，打包工具链的版本变化需要人工确认。
+Dependabot 每周检查 `requirements*.txt` 与 workflow 里引用的 Action。
+patch 级更新会在 CI 通过后自动合并；minor 与 major 留给人看 ——
+这个项目要把 exe 发给真实用户，打包工具链的版本变化需要人工确认。
