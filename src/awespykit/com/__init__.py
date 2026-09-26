@@ -5,7 +5,7 @@ from .common import (EMPTY_STR, EnvDisplayPair, QThreadModel, ThreadRepo,
 from .enums import (Accept, AppStyle, DataType, Linkage, QMode, RoleData,
                     WorkDir)
 from .mapping import PKGNAME_MAP
-from .requires import REQ_FPVER
+from .requires import REQ_FPVER, check_fastpip_version
 from .widgets import (DropableListWidget, DropableTableWidget,
                       EditableListItem, ItemDelegate, LineEdit, PlainTextEdit,
                       TextEdit)
@@ -26,6 +26,7 @@ __all__ = [
     "QMode",
     "QThreadModel",
     "REQ_FPVER",
+    "check_fastpip_version",
     "RoleData",
     "DropableTableWidget",
     "TextEdit",

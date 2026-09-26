@@ -41,17 +41,31 @@ from awespykit.settings import *
 from awespykit.ui import *
 from awespykit.utils.thmt import *
 
-if VERNUM[0] != REQ_FPVER[0]:
-    raise Exception(f"当前环境的 fastpip 主版本号({VERNUM[0]})非本程序要求：{REQ_FPVER[0]}")
-if VERNUM[1] < REQ_FPVER[1]:
-    raise Exception(f"当前环境的 fastpip 次版本号({VERNUM[1]})低于本程序要求：{REQ_FPVER[1]}")
-elif VERNUM[1] == REQ_FPVER[1] and VERNUM[2] < REQ_FPVER[2]:
-    raise Exception(f"当前环境的 fastpip 修订号({VERNUM[2]})低于本程序要求：{REQ_FPVER[2]}")
-################################################################
-# 版本号的定义：主版本号.次版本号.修订号，对 fastpip 的版本号要求：
-# 1. 主版本号必须与要求一致，次版本号必须大于等于要求的次版本号
-# 2. 如次版本号等于要求的次版本号，则修订号必须大于等于要求的修订号
-################################################################
+# ── 依赖版本自检 ────────────────────────────────────────────────────────────
+#
+# fastpip 是本程序的核心依赖，版本不符时必须停下，否则会在后续操作里以各种
+# 难以理解的方式出错（例如少了某个方法、返回结构变了）。
+#
+# 但「直接 raise」在这个程序里是个糟糕的选择：打包成 exe 时 console=False，
+# 没有控制台窗口，异常信息写在 stderr 里谁也看不到 —— 用户双击图标后只会
+# 看到进程一闪而过，完全没有提示，无从排查（典型的「双击没反应」）。
+#
+# 因此改成用对话框把原因和解决办法直接告诉用户，再退出。
+# 判断逻辑放在 com/requires.py 里，便于单独测试。
+_version_error = check_fastpip_version(VERNUM)
+if _version_error:
+    try:
+        _error_app = QApplication(sys.argv)
+        QMessageBox.critical(
+            None,
+            f"{APP_NAME} 无法启动",
+            f"{_version_error}\n\n"
+            f"如果问题持续存在，请重新安装本程序。",
+        )
+    except Exception:
+        # 连图形界面都起不来时，退回命令行输出
+        print(f"{APP_NAME} 无法启动：\n{_version_error}", file=sys.stderr)
+    sys.exit(1)
 
 _IS_MAIN_MODULE = False
 
