@@ -16,7 +16,7 @@ from ..res.res import *
 from ..settings import *
 from ..ui import *
 
-from .messagebox import MessageBox
+from .messagebox import MessageBox, save_config_or_warn
 from .query_file_path import QueryFilePath
 
 DEFAULT_CUSTOM_TMPDIR = "scf_reqs"

@@ -92,7 +92,14 @@ class MainEntrance(Ui_main_entrance, QMainWindow):
         self.__theme_action(self.__config.selected_thm)
 
     def display(self):
-        self.resize(*self.__config.window_size)
+        # 配置里是 (0, 0) 时表示从未记录过用户调整，按内容自然尺寸显示。
+        # 启动窗口的按钮是横向排列的，自然尺寸约为 324x58；若强行用写死的
+        # 竖长条尺寸，按钮会被挤成竖排，外观与预期不符。
+        width, height = self.__config.window_size
+        if width > 0 and height > 0:
+            self.resize(width, height)
+        else:
+            self.adjustSize()
         self.showNormal()
 
     def __store_window_size(self):

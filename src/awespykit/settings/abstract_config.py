@@ -74,14 +74,18 @@ def coerce_size(value, default):
     JSON 没有元组类型，存盘后 (800, 600) 会变成 [800, 600]；若配置被手工
     改坏（例如写成字符串或长度不对），这里统一退回 default，避免把异常值
     传给 resize() 才在界面上炸掉。
+
+    (0, 0) 是合法值，表示「按内容自然尺寸显示」（见 MainEntrance 的启动窗口），
+    因此只拒绝负数。
     """
     try:
         width, height = value
         width, height = int(width), int(height)
     except (TypeError, ValueError):
         return tuple(default)
-    # 非正数的窗口尺寸对 Qt 没有意义，多半是配置被改坏；回退到默认值
-    if width <= 0 or height <= 0:
+    # 负数的窗口尺寸对 Qt 没有意义，多半是配置被改坏；回退到默认值。
+    # 0 是允许的：作为「未记录过尺寸、按内容自适应」的标记。
+    if width < 0 or height < 0:
         return tuple(default)
     return width, height
 

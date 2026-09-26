@@ -17,7 +17,7 @@ from ..utils.main import launch_explorer
 from ..utils.pyi import PyiTool
 from ..utils.venv import VtEnv
 
-from .messagebox import MessageBox
+from .messagebox import MessageBox, save_config_or_warn
 
 
 class PyinstallerToolWindow(Ui_pyinstaller_tool, QMainWindow):

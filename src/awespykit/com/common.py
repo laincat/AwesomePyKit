@@ -144,8 +144,16 @@ class ThreadRepo:
             thread.wait(2000)
 
     def is_empty(self):
-        """返回线程仓库是否为空。"""
-        return not self._thread_repo
+        """返回线程仓库中是否没有仍在运行的线程。"""
+        # 注意不能只看列表长度：清理定时器是定时触发的，已结束的线程在被清理
+        # 之前会一直留在列表里。若这里返回 False，各窗口的 closeEvent 会误判
+        # 为「还有任务在运行」而弹出模态对话框 —— 在 closeEvent 里调用 exec_()
+        # 会让 Qt 重入事件处理，表现为点关闭按钮直接崩溃。
+        #
+        # 这也解释了「不定时崩溃」：是否触发取决于清理定时器有没有恰好跑过。
+        return not any(
+            thread.isRunning() for thread, _ in self._thread_repo
+        )
 
 
 class EnvDisplayPair(QObject):

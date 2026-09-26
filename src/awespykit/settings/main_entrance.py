@@ -31,8 +31,14 @@ class MainEntranceConfig(AbstractConfig):
 
     @property
     def window_size(self):
+        # 默认值取 (0, 0)，作为「尚未记录过用户调整」的标记。
+        #
+        # 启动窗口的按钮是横向排列的（sizeHint 约 324x58），而这里原本写死成
+        # (260, 320) —— 一个竖长条。于是首次启动时按钮被挤成竖排，用户必须先
+        # 把窗口横向拉宽再缩回去，才能得到本该有的扁矩形外观。
+        # 用 (0, 0) 表示「按内容自然尺寸显示」，见 MainEntrance.display()。
         return coerce_size(
-            self.setdefault(self._key_window_size, (260, 320)), (260, 320)
+            self.setdefault(self._key_window_size, (0, 0)), (0, 0)
         )
 
     @window_size.setter

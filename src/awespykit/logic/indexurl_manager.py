@@ -8,7 +8,7 @@ from ..settings import *
 from ..ui import *
 from ..utils import *
 
-from .messagebox import MessageBox
+from .messagebox import MessageBox, save_config_or_warn
 
 
 class IndexUrlManagerWindow(Ui_index_manager, QMainWindow):
