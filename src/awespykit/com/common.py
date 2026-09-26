@@ -104,26 +104,44 @@ class ThreadRepo:
         self._mutex.unlock()
 
     def stop_all(self):
-        """
-        按线程重要等级退出线程。
-        0级：重要，安全退出；
-        1级：不重要，立即退出；
-        其他：未知等级，安全退出。
-        """
-        for thread, level in self._thread_repo:
+        """请求停止所有线程；返回 True 表示全部已确认停止。"""
+        # 请求停止所有线程，并返回「是否真的停下来了」。
+        #
+        # 这里有个必须说清楚的事实：quit() 只能停掉「跑着 Qt 事件循环」的线程。
+        # 而本程序里的工作线程都是 QThreadModel(一个普通函数)，run() 直接执行
+        # 函数体、从不调用 exec()，所以 quit() 对它们**没有任何效果**。
+        #
+        # 后果不是小问题：界面文案写着「已停止」，用户便会放心强退程序，
+        # 而此时 pip 可能正处在安装/卸载的关键步骤上，中断会留下装了一半的包、
+        # 损坏的环境。因此对等级 0（重要）的线程同样使用 terminate()，
+        # 并且把真实结果如实报告给调用方，让界面能提示用户等待。
+        #
+        # 等级约定：0 重要、1 不重要、其它未知（一律按重要处理）。
+        stopped_all = True
+        for thread, level in list(self._thread_repo):
             thread.no_signal()
-            if level == 0:
-                thread.quit()
-            elif level == 1:
+            if level == 1:
                 thread.terminate()
             else:
+                # 先给线程一个自行退出的机会（若它内部监听取消标志），
+                # 再强制终止；terminate() 之后必须 wait()，否则线程可能
+                # 在后续代码里继续访问已经失效的对象。
                 thread.quit()
+                if not thread.wait(200):
+                    thread.terminate()
+                    thread.wait(2000)
+            if thread.isRunning():
+                stopped_all = False
+        return stopped_all
 
     def kill_all(self):
         """立即终止所有线程。"""
-        for thread, _ in self._thread_repo:
+        # 立即强制终止所有线程（用于「强制退出」这类用户明确要求立刻结束的场景）。
+        # terminate() 之后等待线程真正结束，避免它在窗口销毁后还去触碰界面对象。
+        for thread, _ in list(self._thread_repo):
             thread.no_signal()
             thread.terminate()
+            thread.wait(2000)
 
     def is_empty(self):
         """返回线程仓库是否为空。"""

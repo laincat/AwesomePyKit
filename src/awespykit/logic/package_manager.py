@@ -104,7 +104,10 @@ class PackageManagerWindow(Ui_package_manager, QMainWindow):
     def __stop_before_close():
         return not MessageBox(
             "警告",
-            "当前有任务正在运行！\n是否尝试停止所有正在运行的任务并关闭窗口？",
+            "当前有任务正在运行！\n\n"
+            "停止任务会中断正在执行的 pip 操作。如果正在安装、卸载或升级包，"
+            "中断可能让该 Python 环境留下装了一半的包。\n\n"
+            "建议等任务跑完再关闭窗口。仍要停止并退出吗？",
             QMessageBox.Question,
             (("accept", "尝试停止并关闭"), ("reject", "取消")),
         ).exec_()

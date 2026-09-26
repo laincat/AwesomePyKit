@@ -97,7 +97,10 @@ class MainEntrance(Ui_main_entrance, QMainWindow):
         else:
             user_messagebox_role = MessageBox(
                 "警告",
-                "有后台任务正在运行，是否强制结束任务？",
+                "有后台任务正在运行。\n\n"
+                "强制结束会立即中断正在执行的 pip 操作，可能让相关 Python "
+                "环境留下装了一半的包。\n\n"
+                "确定要强制退出吗？",
                 QMessageBox.Warning,
                 (("accept", "强制退出"), ("reject", "取消")),
                 self,
