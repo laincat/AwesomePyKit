@@ -78,14 +78,32 @@ def clean_index_urls(urls):
 def get_cmd_out(
     *commands, re_search=None, timeout=None
 ) -> Union[str, Match[str], None]:
-    """用于从cmd命令执行输出的字符匹配想要的信息。"""
+    """执行命令并取回输出，可选地用正则从输出里提取信息。
+
+    这是一个「尽力而为」的工具函数：命令不存在（例如 Python 环境已被删除、
+    路径失效）、进程启动失败、执行超时，都应安静地返回空结果，由调用方按
+    「拿不到信息」处理，而不是把异常抛到界面上。
+
+    原实现的 try 只包住了 communicate()，Popen 本身在 try 之外 —— 当解释器
+    路径失效时会抛 FileNotFoundError，直接把程序打包工具的版本探测打断。
+    """
     info = STARTUPINFO()
     info.dwFlags = STARTF_USESHOWWINDOW
     info.wShowWindow = SW_HIDE
-    proc = Popen(commands, stdout=PIPE, text=True, startupinfo=info)
+    try:
+        proc = Popen(commands, stdout=PIPE, text=True, startupinfo=info)
+    except OSError:
+        # 命令不存在或无法启动（文件被删、路径失效、无执行权限）
+        return ""
     try:
         strings, _ = proc.communicate(timeout=timeout)
     except Exception:
+        # 超时或读取失败；确保子进程不会残留
+        try:
+            proc.kill()
+            proc.communicate(timeout=5)
+        except Exception:
+            pass
         return ""
     if not re_search:
         return strings.strip()

@@ -124,14 +124,23 @@ class PyiTool(QObject):
 
     def execute_cmd(self):
         """执行命令并读取输出流，通过信号发射字符串、返回码更新主界面面板。"""
-        self.__process = Popen(
-            self.__commands,
-            stdin=PIPE,
-            stdout=PIPE,
-            stderr=STDOUT,
-            startupinfo=self.STARTUP,
-            cwd=self.__cwd,
-        )
+        try:
+            self.__process = Popen(
+                self.__commands,
+                stdin=PIPE,
+                stdout=PIPE,
+                stderr=STDOUT,
+                startupinfo=self.STARTUP,
+                cwd=self.__cwd,
+            )
+        except OSError as e:
+            # 解释器路径失效、工作目录被删、权限不足等。原实现没有捕获，
+            # 异常会在 QThread 里抛出，界面上只看到打包按钮点不动、日志空白。
+            self.__process = None
+            self.stdout.emit(
+                f"[{APP_NAME}] 无法启动打包进程：{e}\n"
+                "请确认所选 Python 环境仍然存在，且工作目录有效。"
+            )
         if self.__commands and self.__process:
             if self.__log_level == "TRACE":
                 self.__time_division_emit()
