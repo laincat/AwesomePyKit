@@ -16,6 +16,17 @@ import os
 import sys
 from pathlib import Path
 
+
+def _force_utf8_output():
+    '''让脚本在非 UTF-8 控制台（Windows 默认 cp936 / cp1252）上也能打印中文。'''
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, 'reconfigure', None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding='utf-8', errors='replace')
+            except Exception:
+                pass
+
 TEMPLATE = '''# UTF-8
 #
 # 由 packaging/make_version_info.py 生成，请勿手工编辑。
@@ -97,6 +108,7 @@ def render(version: str) -> str:
 
 
 def main(argv=None) -> int:
+    _force_utf8_output()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--version', default=None, help='显式指定版本号')
     parser.add_argument(

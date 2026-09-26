@@ -15,6 +15,17 @@ import sys
 import zipfile
 from pathlib import Path
 
+
+def _force_utf8_output():
+    '''让脚本在非 UTF-8 控制台（Windows 默认 cp936 / cp1252）上也能打印中文。'''
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, 'reconfigure', None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding='utf-8', errors='replace')
+            except Exception:
+                pass
+
 # 这些名字只允许出现在 awespykit/ 目录里面
 PRIVATE_TOP_LEVEL = ('com', 'logic', 'settings', 'ui', 'utils')
 
@@ -30,6 +41,7 @@ def check_wheel(wheel: Path) -> list:
 
 
 def main(argv=None) -> int:
+    _force_utf8_output()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('dist_dir', nargs='?', default='dist-python')
     args = parser.parse_args(argv)
