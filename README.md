@@ -159,20 +159,30 @@ python -m PyInstaller --noconfirm packaging/awespykit.spec   :: 构建单文件 
 
 ### 发布流程
 
-发布不需要在本地打包，也不需要手工上传文件。在 GitHub 上创建一个 release
-（打 tag）之后，发布工作流会自动完成四件事：
+发布不需要在本地打包，也不需要手工上传文件。产物由 GitHub Actions 自动构建，
+分两种：
 
-1. 构建 sdist 与 wheel；
-2. 构建 Windows 单文件 exe，并启动它做一次冒烟测试；
-3. 计算全部产物的 SHA256 校验和；
-4. 把上述文件全部上传为该 release 的附件。
+**开发版**：每次推送到 `main` 分支都会自动构建并发布，版本号由 git 提交历史
+推导（形如 `2.1.1.dev8`）。它挂在固定的 tag `dev-latest` 下，每轮构建覆盖同名
+附件，所以下载地址恒定不变：
 
-标签需要是合法的版本号，例如 v2.1.2、v2.1.2-rc1。工作流会先把标签规范化为
-PEP 440 版本号；若标签无法转换（例如 v2.1.1-test），会在第一步就明确报错并
-指出原因。
+```
+https://github.com/laincat/AwesomePyKit/releases/download/dev-latest/Awespykit.exe
+```
 
-只想验证打包配置、不想发布时，手动触发该工作流（workflow_dispatch）即可 ——
-产物只留在 Actions 的 artifact 里。
+开发版会标记为 Pre-release，且不会占用 `releases/latest` —— 那个位置留给正式
+发版。开发版只保证「能构建、能启动」，要稳定版本请用下面这种方式。
+
+**正式发版**：在 GitHub 上创建一个 release（打 tag）即可，产物附件会补到那一条
+release 上。标签需要是合法的版本号，例如 `v2.1.2`、`v2.1.2-rc1`；工作流会先把
+标签规范化为 PEP 440 版本号，若无法转换（例如 `v2.1.1-test`）会在第一步就明确
+报错并指出原因。
+
+两种方式都会构建 sdist 与 wheel、构建 Windows 单文件 exe 并启动它做冒烟测试、
+计算全部产物的 SHA256 校验和，然后一并上传。
+
+**只构建不发布**：手动触发该工作流（`workflow_dispatch`）即可，产物只留在
+Actions 的 artifact 里（保留 14 天）。
 
 ### 依赖自动更新
 
