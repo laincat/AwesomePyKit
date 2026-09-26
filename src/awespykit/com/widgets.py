@@ -138,9 +138,7 @@ class TextEdit(QTextEdit):
             )
         else:
             self.setText("")
-        self.verticalScrollBar().setValue(
-            self.verticalScrollBar().maximumHeight()
-        )
+        self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
 
 
 class PlainTextEdit(QPlainTextEdit):
@@ -219,9 +217,7 @@ class PlainTextEdit(QPlainTextEdit):
             )
         else:
             self.setPlainText("")
-        self.verticalScrollBar().setValue(
-            self.verticalScrollBar().maximumHeight()
-        )
+        self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
 
 
 class ItemDelegate(QItemDelegate):

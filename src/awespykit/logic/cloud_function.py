@@ -60,7 +60,7 @@ class CloudFunctionWindow(Ui_cloud_function, QMainWindow, QueryFilePath):
             self.config_dict_to_widgets()
 
     def __save_window_size(self):
-        if self.isMinimized() or self.isMinimized():
+        if self.isMaximized() or self.isMinimized():
             return
         self.config.window_size = self.width(), self.height()
 
@@ -834,7 +834,7 @@ class CloudExcludesWindow(Ui_cloud_excludes, QMainWindow, QueryFilePath):
             self.showNormal()
 
     def __save_window_size(self):
-        if self.isMinimized() or self.isMinimized():
+        if self.isMaximized() or self.isMinimized():
             return
         self.__parent.config.exc_windowsize = self.width(), self.height()
 

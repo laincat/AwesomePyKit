@@ -8,8 +8,13 @@ from os import walk
 from os.path import basename, join
 from typing import *
 
-from chardet.universaldetector import UniversalDetector
 from fastpip import PyEnv
+
+try:
+    # chardet 5.x 起把 UniversalDetector 提到顶层了，旧的子模块路径已弃用
+    from chardet import UniversalDetector
+except ImportError:  # pragma: no cover - 兼容 chardet 4.x
+    from chardet.universaldetector import UniversalDetector
 
 
 class FindImport(ast.NodeVisitor):
@@ -47,10 +52,15 @@ class FindImport(ast.NodeVisitor):
         return string.split(".", 1)[0]
 
     def add_call_node_arg(self, arg):
-        if isinstance(arg, ast.Str):
+        # Python 3.8+ 的字符串字面量是 ast.Constant；Python 3.7 是 ast.Str。
+        # ast.Str / ast.Num 已在 Python 3.12 中移除，因此不能直接引用。
+        if isinstance(arg, ast.Constant):
+            if isinstance(arg.value, str):
+                self.__result.add(self.split(arg.value))
+            return
+        str_node = getattr(ast, "Str", None)
+        if str_node is not None and isinstance(arg, str_node):
             self.__result.add(self.split(arg.s))
-        elif isinstance(arg, ast.Constant):
-            self.__result.add(self.split(arg.value))
 
 
 def to_be_excluded(_dirpath: str, exclude_dirs):

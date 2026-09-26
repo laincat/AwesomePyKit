@@ -28,8 +28,12 @@ class PyiTool(QObject):
     using_pyi = "-m", "PyInstaller"
     read_pyi_ver = "-m", "PyInstaller", "-v"
 
-    def __init__(self, pyenv: PyEnv = None, cwd=os.getcwd()):
+    def __init__(self, pyenv: PyEnv = None, cwd=None):
         super().__init__()
+        # 不要在参数默认值里写 os.getcwd()：默认值只在函数定义时求值一次，
+        # 之后进程再切换工作目录都不会更新，会静默用上过期的目录。
+        if cwd is None:
+            cwd = os.getcwd()
         self.__pyenv: Union[PyEnv, None] = None
         self.__cwd = None
         self.__process = None
@@ -171,7 +175,7 @@ VarFileInfo([VarStruct("Translation", [2052, 1200])]),
 ],
 )
 """
-        file_path = os.path.join(config_root, "VERSOIN_INFO")
+        file_path = os.path.join(config_root, "VERSION_INFO")
         for key, val in verinfo_dict.items():
             version_info = version_info.replace(key, val)
         try:

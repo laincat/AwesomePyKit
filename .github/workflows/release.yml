@@ -1,0 +1,264 @@
+name: 发布
+
+# 发布流程的入口只有一个：在 GitHub 上创建一个 release（打 tag）。
+# 该 release 发布出去的瞬间，这个工作流自动完成三件事：
+#   1. 把源码打成 sdist + wheel，作为 release 附件；
+#   2. 用 PyInstaller 构建 Windows 单文件 exe，作为 release 附件；
+#   3. 计算全部产物的 SHA256 校验和，一并附上。
+#
+# 整个过程不需要在本地装环境、也不需要手工上传文件。
+#
+# 想只试构建、不发布：走 workflow_dispatch。那样产物只留在 Actions 的
+# artifact 里（保留 14 天），不会碰 release，适合验证打包配置。
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（留空则按 git 标签/元数据推导）'
+        required: false
+        type: string
+
+permissions:
+  contents: write  # 创建 release 与上传附件都需要
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ----------------------------------------------------------------
+  # 1. Python 分发包（sdist + wheel）
+  # ----------------------------------------------------------------
+  build-python-dist:
+    name: 构建 Python 分发包
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # setuptools_scm 从 git 标签推导版本号，浅克隆拿不到标签
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: 安装构建工具
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+
+      - name: 确定版本号
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n '${{ inputs.version }}' ]; then
+            version='${{ inputs.version }}'
+          elif [ '${{ github.event_name }}' = 'release' ]; then
+            # release 事件的 tag 名就是版本号来源
+            version='${{ github.event.release.tag_name }}'
+          else
+            version=''
+          fi
+          echo "value=${version}" >> "$GITHUB_OUTPUT"
+          [ -n "$version" ] && echo "将使用版本号：$version" || echo '未指定版本号，交给 setuptools_scm 推导'
+
+      - name: 构建 sdist 与 wheel
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ steps.version.outputs.value }}
+          SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AWESPY_DEV: ${{ steps.version.outputs.value }}
+        run: python -m build --outdir dist-python
+
+      - name: 校验分发包内容
+        run: python packaging/check_dist.py dist-python
+
+      - name: 在干净环境里安装并导入
+        run: |
+          set -euo pipefail
+          python -m venv /tmp/venv-check
+          # Linux 上装不了 pywin32 / PyQt5 的 Windows 轮子，这里只验 wheel 本身
+          # 能被解析安装（--no-deps 跳过平台相关依赖），以及元数据正确。
+          /tmp/venv-check/bin/python -m pip install --no-deps dist-python/*.whl
+          /tmp/venv-check/bin/python -c "import importlib.metadata as m; print('metadata ok:', m.version('Awespykit'))"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: python-dist
+          path: dist-python/*
+          retention-days: 14
+
+  # ----------------------------------------------------------------
+  # 2. Windows 单文件可执行程序
+  # ----------------------------------------------------------------
+  build-windows-exe:
+    name: 构建 Windows exe
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          # 固定版本：exe 一旦发布出去就该是可复现的，
+          # 换 Python 小版本会改变打包结果与体积。
+          python-version: '3.13'
+
+      - name: 确定版本号
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n '${{ inputs.version }}' ]; then
+            version='${{ inputs.version }}'
+          elif [ '${{ github.event_name }}' = 'release' ]; then
+            version='${{ github.event.release.tag_name }}'
+          else
+            version=''
+          fi
+          # tag 常写成 v2.1.1，元数据里不能有这个 v
+          version="${version#v}"
+          echo "value=${version}" >> "$GITHUB_OUTPUT"
+          echo "AWESPY_VERSION=${version}" >> "$GITHUB_ENV"
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: 记录依赖版本（便于排查“换个环境就崩”）
+        run: python -m pip freeze
+
+      - name: 设定版本号并生成版本信息
+        shell: bash
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          # exe 里的版本号由包元数据提供，所以先把包以正确版本装进来
+          python -m pip install --no-deps .
+          python packaging/make_version_info.py
+          cat packaging/version_info.txt
+
+      - name: 构建单文件 exe
+        run: python -m PyInstaller --noconfirm --clean packaging/awespykit.spec
+
+      - name: 冒烟测试 exe
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          # exe 是窗口程序，不会自己退出。能撑过 15 秒 = 资源与子包都加载成功；
+          # 只要缺资源或缺子包，进程会在启动瞬间就死掉，这里立刻失败。
+          $proc = Start-Process -FilePath 'dist/Awespykit.exe' -PassThru
+          Start-Sleep -Seconds 15
+          if ($proc.HasExited) {
+            Write-Error "exe 启动即退出（退出码 $($proc.ExitCode)），打包内容可能不完整"
+            exit 1
+          }
+          Stop-Process -Id $proc.Id -Force
+          Write-Host 'exe 冒烟测试通过'
+          (Get-Item 'dist/Awespykit.exe').VersionInfo |
+            Select-Object FileVersion, ProductVersion, FileDescription |
+            Format-List
+
+      - name: 生成校验和
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          # 用显式文件名而不是通配符：release 附件必须能一一对应地上传
+          sha256sum Awespykit.exe > Awespykit.exe.sha256
+          cat Awespykit.exe.sha256
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-exe
+          path: |
+            dist/Awespykit.exe
+            dist/Awespykit.exe.sha256
+          retention-days: 14
+
+  # ----------------------------------------------------------------
+  # 3. 汇总并发布到 Release
+  # ----------------------------------------------------------------
+  publish:
+    name: 发布到 Release
+    # 只有真的创建了 release 才发布；手动触发时仅产出 artifact
+    if: github.event_name == 'release'
+    needs: [build-python-dist, build-windows-exe]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: 整理附件
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p upload
+          cp artifacts/python-dist/* upload/
+          cp artifacts/windows-exe/Awespykit.exe upload/
+          cp artifacts/windows-exe/Awespykit.exe.sha256 upload/
+          ls -lh upload
+
+      - name: 补上 Python 分发包的校验和
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd upload
+          sha256sum *.tar.gz *.whl > python-dist.sha256
+          cat python-dist.sha256
+
+      - name: 上传到 Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: |
+            upload/*
+          # 同版本重跑时覆盖同名附件，避免出现 -1/-2 后缀的重复文件
+          overwrite_files: true
+          fail_on_unmatched_files: true
+          append_body: true
+          body: |
+
+            ---
+
+            ### 本次发布的产物
+
+            | 文件 | 说明 |
+            |---|---|
+            | `Awespykit.exe` | Windows 单文件可执行程序，双击即可运行，无需安装 Python |
+            | `Awespykit.exe.sha256` | exe 的 SHA256 校验和 |
+            | `awespykit-*.whl` | Python 分发包（`pip install` 用） |
+            | `awespykit-*.tar.gz` | 源码分发包 |
+            | `python-dist.sha256` | 两个 Python 分发包的 SHA256 校验和 |
+
+            校验下载文件是否完整（PowerShell）：
+
+            ```powershell
+            Get-FileHash .\Awespykit.exe -Algorithm SHA256
+            ```
+
+            也可以直接 `pip install Awespykit -U`，或 `pip install` 上面那个 whl 文件。
+
+      - name: 小结
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '### 发布结果'
+            echo ''
+            echo "- 版本：${{ needs.build-windows-exe.outputs.version }}"
+            echo "- Release：https://github.com/${GITHUB_REPOSITORY}/releases/tag/${{ github.event.release.tag_name }}"
+          } >> "$GITHUB_STEP_SUMMARY"

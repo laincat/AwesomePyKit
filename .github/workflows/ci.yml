@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'img/**'
+      - 'LICENSE'
+      - '.gitignore'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.9 是 requirements.txt 里依赖（PyQt5 5.15 / fastpip 1.7）实际支持的
+        # 最低版本；3.14 代表最新，避免只在老版本上通过。
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # setuptools_scm 依赖 git 标签推导版本号，浅克隆拿不到标签
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: 静态检查（ruff）
+        run: python -m ruff check src/ tests/ packaging/
+
+      - name: 冒烟测试
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest tests -v
+
+      - name: 分发包构建自检
+        run: python -m build --outdir dist-python
+
+      - name: 校验分发包内容
+        # 顶层模块被当成包名发布出去，会污染别人的环境；这里卡住它。
+        run: python packaging/check_dist.py dist-python
+
+  package-check:
+    # 打包成 exe 是本项目最重要的交付物，单独跑一次确保 spec 没被改坏。
+    # 只在最新稳定版上跑：这步耗时最长，且 exe 与 Python 小版本无关。
+    name: 可执行文件构建检查
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: 生成版本信息
+        run: python packaging/make_version_info.py
+
+      - name: 构建单文件 exe
+        run: python -m PyInstaller --noconfirm --clean packaging/awespykit.spec
+
+      - name: 验证 exe 能启动
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          # 窗口程序不会自己退出，能撑过 15 秒就说明加载成功了；
+          # 若资源或子包缺失，进程会在启动瞬间退出，这里就会失败。
+          $proc = Start-Process -FilePath 'dist/Awespykit.exe' -PassThru
+          Start-Sleep -Seconds 15
+          if ($proc.HasExited) {
+            Write-Error "exe 提前退出，退出码 $($proc.ExitCode)"
+            exit 1
+          }
+          Stop-Process -Id $proc.Id -Force
+          Write-Host 'exe 启动正常'
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Awespykit-exe
+          path: dist/Awespykit.exe
+          retention-days: 7

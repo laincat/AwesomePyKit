@@ -1,0 +1,84 @@
+# ==============================================================================
+#  Dependabot —— 自动更新依赖
+#
+#  本仓库有两个真实生态：
+#    1. pip —— requirements.txt / requirements-dev.txt 里的运行与开发依赖
+#    2. github-actions —— workflow 里引用的 Action
+#
+#  ── 需要提前知道的三件事 ──────────────────────────────────────────────────
+#
+#  ① pip 生态是**跨平台的**，装不上会被误报成失败。
+#     pywin32 只发布 Windows 轮子，在 Dependabot（跑在 Linux 上）眼里
+#     属于「找不到可用版本」。所以下面把 pywin32 排除掉，由人工跟进 ——
+#     它的版本节奏很慢，且升级需要真实 Windows 环境验证，本来就不该自动合。
+#
+#  ② requirements.txt 的约束要与 requirements-dev.txt 保持一致。
+#     两个清单都指向同一批包，Dependabot 会分别开 PR；因为都用了分组，
+#     同一批更新会被合并成一个 PR，不会刷屏。
+#
+#  ③ Action 写的是 major 浮动标签（例如 @v7），minor / patch 现在已经自动
+#     生效了。所以 github-actions 这条的唯一价值是「上游发 v8 时提醒你」，
+#     配好之后长期没 PR 是正常的。
+#
+#  ── 关于自动合并 ──────────────────────────────────────────────────────────
+#  见 .github/workflows/dependabot-auto-merge.yml：只自动合 patch 级。
+#  这个项目要把 exe 发布给真实用户，minor 也可能改变打包行为，留人工过一眼。
+# ==============================================================================
+
+version: 2
+
+updates:
+  # --------------------------------------------------------------------------
+  #  运行依赖（进分发包，影响最终用户）
+  # --------------------------------------------------------------------------
+  - package-ecosystem: pip
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 5
+    # 这些是程序实际依赖的库，升级要过 CI（含 exe 打包冒烟测试）
+    groups:
+      runtime-deps:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # pywin32 只发 Windows 轮子，Dependabot 在 Linux 上解析不了，会误报失败。
+      # 它版本节奏慢，且升级需要真实 Windows 验证，交给人工处理。
+      - dependency-name: pywin32
+    commit-message:
+      prefix: 'chore'
+    labels:
+      - dependencies
+    assignees:
+      - laincat
+
+  # --------------------------------------------------------------------------
+  #  Action 版本
+  # --------------------------------------------------------------------------
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: 'ci'
+    labels:
+      - dependencies
+    assignees:
+      - laincat

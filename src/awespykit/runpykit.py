@@ -11,7 +11,11 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-sys.path.append(path.dirname(__file__))  # rpk.exe 入口点所需
+# 必须用 insert(0) 而不是 append：包内模块（com/logic/settings/ui/utils 等）是
+# 以顶层名字导入的，只有把包目录放到 sys.path 最前面，才能保证这些名字解析到
+# 本包内部的模块。若用 append，site-packages 里同名的第三方包会抢先命中
+# （例如 PyPI 上的 utils 包会让 'from utils.thmt import ...' 直接崩溃）。
+sys.path.insert(0, path.dirname(__file__))  # rpk.exe 入口点所需
 
 from __info__ import *
 from com import *

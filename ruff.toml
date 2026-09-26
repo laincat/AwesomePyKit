@@ -1,0 +1,41 @@
+# ruff 配置
+#
+# 这里刻意只启用「真的能抓到 bug」的规则子集：
+#   · E9  —— 语法/导入期错误
+#   · F63/F7/F82 —— 比较、断言、语法类硬错误（名字用错、参数错位）
+#   · F401/F811/F841 —— 未使用导入 / 重复定义 / 未使用变量
+#   · B  —— flake8-bugbear 的常见陷阱（可变默认参数、循环里做闭包等）
+#
+# 没有全量打开全部规则：这个项目是 PyQt5 GUI，代码里存在大量 Qt 约定带来的
+# “看起来像问题”的写法（比如事件处理器必须叫 paint/closeEvent、参数用不上也
+# 得保留签名）。一次打开全部规则会淹在噪音里，反而没人看。
+#
+# 行宽与 tool.black 的 line-length 保持一致。
+
+line-length = 80
+target-version = 'py38'
+exclude = ['.git', '.venv', 'build', 'dist', 'src/awespykit/ui', 'src/awespykit/res']
+
+[lint]
+select = [
+    'E9',    # 语法错误
+    'F63',   # 比较写错（is / == 用混）
+    'F7',    # 语法类硬错误
+    'F82',   # 未定义的名字
+    'F401',  # 导入但没用到
+    'F811',  # 重复定义
+    'F841',  # 赋值了但没用到
+    'B008',  # 函数调用写进默认参数（Qt 里常见误用）
+    'B015',  # 没用的比较表达式
+]
+ignore = [
+    # PyQt5 与 fastpip 都习惯用 `from xxx import *`，这是上游的约定
+    'F403',
+    'F405',
+]
+
+[lint.per-file-ignores]
+# 自动生成的资源文件（由 res.qrc 经 pyrcc5 生成），不要人工干预
+'src/awespykit/res/res.py' = ['E501', 'F401', 'F811', 'E9']
+# UI 文件由 pyuic5 从 .ui 生成，同理
+'src/awespykit/ui/*.py' = ['E501', 'F401', 'F811']

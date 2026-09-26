@@ -1142,7 +1142,9 @@ class NameQueryPanel(Ui_query_panel, QMainWindow):
             name = self.__parent.config.query_name
         self.uiLineEdit_input_name.setText(name)
         if mode == QMode.NotSPCF:
-            if self.__parent.config == QMode.NotSPCF:
+            # 原来这里写的是 self.__parent.config，是配置对象与枚举的比较，
+            # 恒为 False，永远走不到默认分支。真实意图是比较配置里的查询模式。
+            if self.__parent.config.query_mode == QMode.NotSPCF:
                 mode = QMode.Pkg2Imp
             else:
                 mode = self.__parent.config.query_mode
