@@ -21,7 +21,9 @@ block_cipher = None
 
 a = Analysis(
     [str(SRC_DIR / 'runpykit.py')],
-    pathex=[str(SRC_DIR)],  # 包内用的是扁平导入（com / logic / ui / utils ...）
+    # 入口脚本以包名绝对导入（from awespykit.com import ...），所以把 src 目录
+    # 放进搜索路径，让 PyInstaller 能解析到整个 awespykit 包。
+    pathex=[str(REPO_ROOT / 'src')],
     binaries=[],
     datas=[],
     hiddenimports=[],

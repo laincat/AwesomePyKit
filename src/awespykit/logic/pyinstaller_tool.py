@@ -5,17 +5,17 @@ import shutil
 from platform import machine, platform
 from typing import *
 
-from com import *
+from ..com import *
 from fastpip import PyEnv
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from settings import *
-from ui import *
-from utils.cip import ImportInspector
-from utils.main import launch_explorer
-from utils.pyi import PyiTool
-from utils.venv import VtEnv
+from ..settings import *
+from ..ui import *
+from ..utils.cip import ImportInspector
+from ..utils.main import launch_explorer
+from ..utils.pyi import PyiTool
+from ..utils.venv import VtEnv
 
 from .messagebox import MessageBox
 
@@ -92,7 +92,7 @@ class PyinstallerToolWindow(Ui_pyinstaller_tool, QMainWindow):
             ).exec_()
         self.__save_window_size()
         self.config_widgets_to_cfg()
-        self.config.save_config()
+        save_config_or_warn(self.config, self)
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() == Qt.Key_Escape:
@@ -864,7 +864,11 @@ class PyinstallerToolWindow(Ui_pyinstaller_tool, QMainWindow):
         spec_file_path = os.path.join(spec_file_dir, program_name) + ".spec"
         try:
             os.remove(spec_file_path)
-        except Exception:
+        except FileNotFoundError:
+            # 本来就不存在，属于正常情况，无需提示
+            pass
+        except OSError:
+            # 被占用或无权限；删不掉不影响后续打包（PyInstaller 会覆盖它）
             pass
         # 自定义 spec 文件储存目录的情况下，考虑到目录内可能有其他文件
         # 所以只考虑删除 spec 文件，不删除自定义目录，以防误删其他无关文件

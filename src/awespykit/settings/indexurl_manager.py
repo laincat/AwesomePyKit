@@ -4,7 +4,7 @@ from typing import Sequence
 
 from fastpip import index_urls
 
-from .abstract_config import AbstractConfig
+from .abstract_config import AbstractConfig, coerce_size
 from .package_manager import get_shared_pypaths
 
 
@@ -38,9 +38,10 @@ class IndexManagerConfig(AbstractConfig):
 
     @property
     def window_size(self):
-        if self._key_window_size not in self:
-            self[self._key_window_size] = 1000, 500
-        return self[self._key_window_size]
+        return coerce_size(
+            self.setdefault(self._key_window_size, (1000, 500)),
+            (1000, 500),
+        )
 
     @window_size.setter
     def window_size(self, value):

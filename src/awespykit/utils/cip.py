@@ -4,6 +4,7 @@ __doc__ = "检查项目导入的所有模块所需的类、函数等。"
 
 import ast
 import re
+from pathlib import PurePath
 from os import walk
 from os.path import basename, join
 from typing import *
@@ -25,7 +26,15 @@ class FindImport(ast.NodeVisitor):
             self.__result = set()
 
     def visit_ImportFrom(self, node):
-        self.__result.add(self.split(node.module))
+        # 相对导入（from . import x / from .models import Y）永远指向项目自身的
+        # 模块，不可能是需要安装的第三方包，因此整条跳过。
+        #
+        # 原实现在这里对 node.module 调用 split，而相对导入的 node.module 可能
+        # 是 None（例如 from . import x），会抛 AttributeError；调用方又把整个
+        # 文件的解析包在 try 里，于是「含相对导入的文件」其全部依赖会被静默
+        # 丢弃 —— 用户看不到任何缺失模块的提示（漏报），这是导入检查的核心功能。
+        if node.level == 0 and node.module:
+            self.__result.add(self.split(node.module))
         self.generic_visit(node)
 
     def visit_Import(self, node):
@@ -64,12 +73,21 @@ class FindImport(ast.NodeVisitor):
 
 
 def to_be_excluded(_dirpath: str, exclude_dirs):
-    _dirpath = _dirpath.lower()
+    # 原来的实现用 startswith 做前缀比较，会把 C:\project 误判成 C:\proj 的
+    # 子目录。这里改成按路径分量比较：只有当 _dirpath 确实位于某个排除目录
+    # 之下（或正好是它本身）时才算排除。
+    if not _dirpath:
+        return False
+    target = PurePath(_dirpath.lower())
     for p in exclude_dirs:
         if not p:
             continue
-        if _dirpath.startswith(p.lower()):
-            return True
+        excluded = PurePath(p.lower())
+        try:
+            target.relative_to(excluded)
+        except ValueError:
+            continue
+        return True
     return False
 
 
@@ -117,7 +135,7 @@ class ImportInspector:
         """查找并返回 string 中所有需要导入的模块集合"""
         try:
             node = ast.parse(string, "<string>", "exec")
-        except:
+        except SyntaxError:
             return set()
         abstract_syntax_tree_visit = FindImport()
         abstract_syntax_tree_visit.visit(node)

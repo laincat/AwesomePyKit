@@ -6,13 +6,13 @@ import os
 from subprocess import *
 from typing import *
 
-from __info__ import *
-from com import *
+from ..__info__ import *
+from ..com import *
 from fastpip import PyEnv, decode_bytes
 from PyQt5.QtCore import *
-from settings import *
+from ..settings import *
 
-from utils.main import get_cmd_out
+from ..utils.main import get_cmd_out
 
 PYI_P = r"(\d+\.\d+(\.\d+)?)"
 

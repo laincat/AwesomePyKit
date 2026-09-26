@@ -3,7 +3,7 @@
 from copy import deepcopy
 from typing import Sequence
 
-from .abstract_config import AbstractConfig
+from .abstract_config import AbstractConfig, coerce_size
 from .package_manager import get_shared_pypaths
 
 
@@ -389,9 +389,10 @@ class PyinstallerToolConfig(AbstractConfig):
 
     @property
     def window_size(self):
-        if self._key_window_size not in self:
-            self[self._key_window_size] = 960, 600
-        return self[self._key_window_size]
+        return coerce_size(
+            self.setdefault(self._key_window_size, (960, 600)),
+            (960, 600),
+        )
 
     @window_size.setter
     def window_size(self, value):
@@ -402,9 +403,10 @@ class PyinstallerToolConfig(AbstractConfig):
 
     @property
     def envch_winsize(self):
-        if self._key_envch_winsize not in self:
-            self[self._key_envch_winsize] = 430, 200
-        return self[self._key_envch_winsize]
+        return coerce_size(
+            self.setdefault(self._key_envch_winsize, (430, 200)),
+            (430, 200),
+        )
 
     @envch_winsize.setter
     def envch_winsize(self, value):
@@ -415,9 +417,10 @@ class PyinstallerToolConfig(AbstractConfig):
 
     @property
     def impcheck_winsize(self):
-        if self._key_impcheck_winsize not in self:
-            self[self._key_impcheck_winsize] = 960, 600
-        return self[self._key_impcheck_winsize]
+        return coerce_size(
+            self.setdefault(self._key_impcheck_winsize, (960, 600)),
+            (960, 600),
+        )
 
     @impcheck_winsize.setter
     def impcheck_winsize(self, value):

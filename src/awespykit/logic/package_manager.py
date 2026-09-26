@@ -3,14 +3,14 @@
 from os import path
 from typing import *
 
-from com import *
+from ..com import *
 from fastpip import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from settings import *
-from ui import *
-from utils import *
+from ..settings import *
+from ..ui import *
+from ..utils import *
 
 from .generic_output import GenericOutputWindow
 from .messagebox import MessageBox
@@ -132,7 +132,7 @@ class PackageManagerWindow(Ui_package_manager, QMainWindow):
         self.__save_window_size()
         if not self.__output.not_shown_yet():
             self.config.output_side = self.__output.linkage
-        self.config.save_config()
+        save_config_or_warn(self.config, self)
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() == Qt.Key_Escape:

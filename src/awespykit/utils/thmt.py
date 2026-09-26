@@ -10,12 +10,12 @@ from os import path
 from pathlib import Path
 from typing import *
 
-from com import *
+from ..com import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from res.res import *
-from settings import themes_root
+from ..res.res import *
+from ..settings import themes_root
 
 _App = QApplication(sys.argv)
 try:

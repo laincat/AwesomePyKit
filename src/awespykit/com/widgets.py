@@ -8,9 +8,20 @@ from typing import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from utils.thmt import PreThemeList
 
 from .enums import Accept, RoleData
+
+
+def _current_theme_colors():
+    # 取当前主题的占位符文字色、表项常规底色、表项选中底色。
+    #
+    # 这里刻意在调用时才导入 utils.thmt：它反过来要用 com 里的
+    # DataType / AppStyle / EMPTY_STR，若在本模块顶层导入就会形成
+    # com -> com.widgets -> utils.thmt -> com 的循环依赖，
+    # 导入顺序一变（例如先 import awespykit.utils.thmt）就会直接崩。
+    from ..utils.thmt import PreThemeList
+
+    return PreThemeList.current.getColors()
 
 
 class LineEdit(QLineEdit):
@@ -250,7 +261,7 @@ class ItemDelegate(QItemDelegate):
         option: QStyleOptionViewItem,
         index: QModelIndex,
     ) -> None:
-        phtc, tibgn, tibgs = PreThemeList.current.getColors()
+        phtc, tibgn, tibgs = _current_theme_colors()
         if phtc and tibgn and tibgs:
             if option.state & QStyle.State_Selected:
                 background_color = QColor(tibgs)

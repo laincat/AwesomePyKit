@@ -2,9 +2,9 @@
 
 from typing import Iterable, Sequence
 
-from com import *
+from ..com import *
 
-from .abstract_config import AbstractConfig
+from .abstract_config import AbstractConfig, coerce_size, coerce_enum
 
 _shared_saved_pypaths = None
 
@@ -122,9 +122,10 @@ class PackageManagerConfig(AbstractConfig):
 
     @property
     def window_size(self):
-        if self._key_window_size not in self:
-            self[self._key_window_size] = 960, 600
-        return self[self._key_window_size]
+        return coerce_size(
+            self.setdefault(self._key_window_size, (960, 600)),
+            (960, 600),
+        )
 
     @window_size.setter
     def window_size(self, value):
@@ -135,9 +136,10 @@ class PackageManagerConfig(AbstractConfig):
 
     @property
     def install_winsize(self):
-        if self._key_install_winsize not in self:
-            self[self._key_install_winsize] = 400, 420
-        return self[self._key_install_winsize]
+        return coerce_size(
+            self.setdefault(self._key_install_winsize, (400, 420)),
+            (400, 420),
+        )
 
     @install_winsize.setter
     def install_winsize(self, value):
@@ -148,9 +150,10 @@ class PackageManagerConfig(AbstractConfig):
 
     @property
     def input_winsize(self):
-        if self._key_input_winsize not in self:
-            self[self._key_input_winsize] = 580, 0
-        return self[self._key_input_winsize]
+        return coerce_size(
+            self.setdefault(self._key_input_winsize, (580, 0)),
+            (580, 0),
+        )
 
     @input_winsize.setter
     def input_winsize(self, value):
@@ -161,20 +164,22 @@ class PackageManagerConfig(AbstractConfig):
 
     @property
     def output_side(self):
-        if self._key_output_side not in self:
-            self[self._key_output_side] = Linkage.Left
-        return self[self._key_output_side]
+        # JSON 里存的是裸 int，读回时要还原成枚举，否则调用方的
+        # Linkage(...) 虽然还能转，但任何 .name / 比较都会变得脆弱。
+        value = self.setdefault(self._key_output_side, int(Linkage.Left))
+        return coerce_enum(value, Linkage, Linkage.Left)
 
     @output_side.setter
     def output_side(self, value):
         assert isinstance(value, Linkage)
-        self[self._key_output_side] = value
+        self[self._key_output_side] = int(value)
 
     @property
     def output_winsize(self):
-        if self._key_output_winsize not in self:
-            self[self._key_output_winsize] = 350, 500
-        return self[self._key_output_winsize]
+        return coerce_size(
+            self.setdefault(self._key_output_winsize, (350, 500)),
+            (350, 500),
+        )
 
     @output_winsize.setter
     def output_winsize(self, value):
@@ -194,12 +199,13 @@ class PackageManagerConfig(AbstractConfig):
 
     @property
     def query_mode(self):
-        return self.setdefault(self._key_query_mode, QMode.Pkg2Imp)
+        value = self.setdefault(self._key_query_mode, int(QMode.Pkg2Imp))
+        return coerce_enum(value, QMode, QMode.Pkg2Imp)
 
     @query_mode.setter
     def query_mode(self, value):
         assert isinstance(value, QMode)
-        self[self._key_query_mode] = value
+        self[self._key_query_mode] = int(value)
 
     @property
     def query_case(self):
@@ -212,7 +218,9 @@ class PackageManagerConfig(AbstractConfig):
 
     @property
     def query_winsize(self):
-        return self.setdefault(self._key_query_winsize, (330, 330))
+        return coerce_size(
+            self.setdefault(self._key_query_winsize, (330, 330)), (330, 330)
+        )
 
     @query_winsize.setter
     def query_winsize(self, value):

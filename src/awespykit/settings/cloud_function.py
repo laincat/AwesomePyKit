@@ -3,9 +3,9 @@
 from copy import deepcopy
 from typing import *
 
-from com import WorkDir
+from ..com import WorkDir
 
-from .abstract_config import AbstractConfig
+from .abstract_config import AbstractConfig, coerce_enum, coerce_size
 from .package_manager import get_shared_pypaths
 
 
@@ -74,19 +74,16 @@ class CloudFunctionCFG(dict):
 
     @property
     def working_tmpdir(self) -> WorkDir:
-        value = self.setdefault(self._key_working_tempdir, WorkDir.TmpDir)
-        if not isinstance(value, WorkDir):
-            try:
-                value = WorkDir(value)
-            except:
-                value = WorkDir.TmpDir
-            self[self._key_working_tempdir] = value
-        return self[self._key_working_tempdir]
+        value = self.setdefault(self._key_working_tempdir, int(WorkDir.TmpDir))
+        coerced = coerce_enum(value, WorkDir, WorkDir.TmpDir)
+        if coerced is not value:
+            self[self._key_working_tempdir] = coerced
+        return coerced
 
     @working_tmpdir.setter
     def working_tmpdir(self, value):
         assert isinstance(value, WorkDir)
-        self[self._key_working_tempdir] = value
+        self[self._key_working_tempdir] = int(value)
 
     @property
     def custom_tempdir(self):
@@ -164,7 +161,9 @@ class CloudFunctionConfig(AbstractConfig):
 
     @property
     def window_size(self):
-        return self.setdefault(self._key_window_size, (600, 500))
+        return coerce_size(
+            self.setdefault(self._key_window_size, (600, 500)), (600, 500)
+        )
 
     @window_size.setter
     def window_size(self, value):
@@ -175,7 +174,9 @@ class CloudFunctionConfig(AbstractConfig):
 
     @property
     def exc_windowsize(self):
-        return self.setdefault(self._key_exc_windowsize, (500, 400))
+        return coerce_size(
+            self.setdefault(self._key_exc_windowsize, (500, 400)), (500, 400)
+        )
 
     @exc_windowsize.setter
     def exc_windowsize(self, value):

@@ -3,14 +3,14 @@
 import os
 from typing import *
 
-from com import *
+from ..com import *
 from fastpip import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from settings import *
-from ui import *
-from utils import *
+from ..settings import *
+from ..ui import *
+from ..utils import *
 
 from .messagebox import MessageBox
 from .query_file_path import QueryFilePath
@@ -86,7 +86,7 @@ class PackageDownloadWindow(Ui_package_download, QMainWindow, QueryFilePath):
             ).exec_()
         self.__store_window_size()
         self.config_widgets_to_dict()
-        self.config.save_config()
+        save_config_or_warn(self.config, self)
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() == Qt.Key_Escape:

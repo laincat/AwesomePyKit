@@ -7,6 +7,7 @@ import re
 from subprocess import *
 from typing import *
 from typing import Match
+from urllib.parse import urlparse
 
 import win32api
 from fastpip import PyEnv
@@ -44,7 +45,30 @@ def clean_py_paths(paths):
 
 
 def check_index_url(url):
-    return bool(re.match(r"^https://.+/simple/?$", url.lower()))
+    """判断字符串是否像一个可用的 pip 镜像源地址。
+
+    原实现只接受 https 且必须以 /simple 结尾，会误拒两类真实存在的合法源：
+      · http 源（内网私服、离线镜像非常常见）
+      · 非 /simple 结尾的源（例如 PyTorch 官方的 download.pytorch.org/whl/cu118）
+    两者都是 pip -i/--index-url 完全接受的形式。
+
+    这里放宽到：必须是 http/https 的绝对地址，且带主机名；仍然拒绝空串、
+    相对路径、以及明显写错的东西（比如把包名填进来）。
+    """
+    if not isinstance(url, str):
+        return False
+    url = url.strip()
+    if not url:
+        return False
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return False
+    # 必须有主机名，且主机名里得有个点或就是 localhost（拒绝 'https://simple'
+    # 这种把路径当主机的情况）
+    host = parsed.hostname or ""
+    if not host or ("." not in host and host != "localhost"):
+        return False
+    return True
 
 
 def clean_index_urls(urls):

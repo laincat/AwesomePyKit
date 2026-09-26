@@ -1,10 +1,10 @@
 # coding: utf-8
 
-from com import *
+from ..com import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from ui import *
+from ..ui import *
 
 
 class GenericOutputWindow(Ui_generic_output, QMainWindow):

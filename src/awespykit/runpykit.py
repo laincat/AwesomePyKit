@@ -4,26 +4,42 @@ __license__ = "GNU General Public License v3 (GPLv3)"
 
 import sys
 from functools import partial
-from os import path
 
 from fastpip import VERNUM
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-# 必须用 insert(0) 而不是 append：包内模块（com/logic/settings/ui/utils 等）是
-# 以顶层名字导入的，只有把包目录放到 sys.path 最前面，才能保证这些名字解析到
-# 本包内部的模块。若用 append，site-packages 里同名的第三方包会抢先命中
-# （例如 PyPI 上的 utils 包会让 'from utils.thmt import ...' 直接崩溃）。
-sys.path.insert(0, path.dirname(__file__))  # rpk.exe 入口点所需
+# 这个文件是本程序的入口，需要同时支持三种启动方式：
+#   1. 控制台脚本 rpk（由 pyproject.toml 的 [project.scripts] 生成）
+#   2. python -m awespykit
+#   3. 直接运行本文件：python src/awespykit/runpykit.py（以及 PyInstaller 打包后
+#      以本文件为入口脚本运行）
+#
+# 第 3 种方式没有包上下文（__package__ 为空），相对导入会直接失败，所以本文件
+# 一律使用「以包名开头」的绝对导入。这样无论以哪种方式启动，导入都能成立，
+# 也不需要额外做一次 runpy 重定向 —— 那种做法在包路径推导不如预期时，会抛出
+# “No module named 'awespykit'” 这种指向前提条件、很难排查的错误。
+#
+# 直接运行脚本时，包目录的父目录（即项目的 src 目录）需要位于 sys.path 上。
+# 这里按 __file__ 推导并补上；推导不出来时不做任何事，让下面的导入语句给出
+# 原本的错误信息（而不是被这层逻辑掩盖）。
+if __package__ in (None, ""):
+    from os import path as _path
 
-from __info__ import *
-from com import *
-from logic import *
-from res.res import *
-from settings import *
-from ui import *
-from utils.thmt import *
+    _pkg_parent = _path.dirname(_path.dirname(_path.abspath(__file__)))
+    if _path.isdir(_path.join(_pkg_parent, "awespykit")) and (
+        _pkg_parent not in sys.path
+    ):
+        sys.path.insert(0, _pkg_parent)
+
+from awespykit.__info__ import *
+from awespykit.com import *
+from awespykit.logic import *
+from awespykit.res.res import *
+from awespykit.settings import *
+from awespykit.ui import *
+from awespykit.utils.thmt import *
 
 if VERNUM[0] != REQ_FPVER[0]:
     raise Exception(f"当前环境的 fastpip 主版本号({VERNUM[0]})非本程序要求：{REQ_FPVER[0]}")
@@ -95,7 +111,7 @@ class MainEntrance(Ui_main_entrance, QMainWindow):
             else:
                 event.ignore()
         self.__store_window_size()
-        self.__config.save_config()
+        save_config_or_warn(self.__config, self)
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() == Qt.Key_Escape:

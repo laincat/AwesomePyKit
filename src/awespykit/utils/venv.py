@@ -31,7 +31,8 @@ class VtEnv(PyEnv):
         self.__venv_exist = False
         try:
             names = listdir(dir_path)
-        except:
+        except OSError:
+            # 目录不存在或没有读取权限，视为没有虚拟环境
             return False
         for name in names:
             fullpath = path.join(dir_path, name)

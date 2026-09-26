@@ -3,9 +3,9 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from ui import *
+from ..ui import *
 
-from logic.messagebox import MessageBox
+from ..logic.messagebox import MessageBox
 
 
 class AboutWindow(Ui_about_window, QMainWindow):

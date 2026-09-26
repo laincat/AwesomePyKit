@@ -33,6 +33,38 @@ def generate_respath(*p):
     return op.join(_res_root, *p)
 
 
+def coerce_enum(value, enum_cls, default):
+    """把配置文件里读出来的原始值还原成枚举成员。
+
+    配置是以 JSON 保存的，枚举成员写进去序列化成裸数字/字符串，读回来就是
+    int 或 str。若不做还原，像 AppStyle.WindowsVista.name 这种访问枚举属性
+    的代码就会抛 AttributeError（int 没有 name），而且通常要到用户真正用到
+    那个功能时才暴露。
+
+    无法识别时返回 default，保证配置损坏也不会让程序起不来。
+    """
+    if isinstance(value, enum_cls):
+        return value
+    try:
+        return enum_cls(value)
+    except (ValueError, TypeError, KeyError):
+        return default
+
+
+def coerce_size(value, default):
+    """把配置里读出来的窗口尺寸还原成 (宽, 高) 整数元组。
+
+    JSON 没有元组类型，存盘后 (800, 600) 会变成 [800, 600]；若配置被手工
+    改坏（例如写成字符串或长度不对），这里统一退回 default，避免把异常值
+    传给 resize() 才在界面上炸掉。
+    """
+    try:
+        width, height = value
+        return int(width), int(height)
+    except (TypeError, ValueError):
+        return tuple(default)
+
+
 class AbstractConfig(dict):
     root = Path(config_root)
 
@@ -42,11 +74,19 @@ class AbstractConfig(dict):
         self.__load_json()
 
     def save_config(self):
+        """把配置写回磁盘。
+
+        写失败时不再默默忽略：返回 False 由调用方决定是否提示用户。
+        之前这里是 except: pass，磁盘满、目录只读、杀毒软件拦截等情况都会
+        静默丢失用户的设置（例如刚调好的窗口布局、刚添加的 Python 环境），
+        用户只会觉得「设置怎么没保存」。
+        """
         try:
             with open(self.__cfg, "wt", encoding="utf-8") as f:
                 json.dump(self, f, ensure_ascii=False)
         except Exception:
-            pass
+            return False
+        return True
 
     def __load_json(self):
         """如果 __cfg 文件无法读取则返回空字典"""

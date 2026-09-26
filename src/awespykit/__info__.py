@@ -11,7 +11,10 @@ APP_NAME = "Awespykit"
 PRE_VER = "2.1.1"
 try:
     VERSION = metadata.version(APP_NAME)
-except:
+except Exception:
+    # 包未安装（直接跑源码）时拿不到元数据，退回兜底版本号。
+    # 这里刻意用 Exception 而不是裸 except：裸 except 会连 KeyboardInterrupt
+    # 和 SystemExit 一起吞掉，调试时很难受。
     VERSION = PRE_VER
 AUTHOR = "hrp/hrpzcf"
 

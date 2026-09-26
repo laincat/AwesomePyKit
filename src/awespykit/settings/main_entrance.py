@@ -2,9 +2,9 @@
 
 from typing import Sequence
 
-from com import *
+from ..com import *
 
-from .abstract_config import AbstractConfig
+from .abstract_config import AbstractConfig, coerce_enum, coerce_size
 
 
 class MainEntranceConfig(AbstractConfig):
@@ -19,16 +19,21 @@ class MainEntranceConfig(AbstractConfig):
 
     @property
     def app_style(self):
-        return self.setdefault(self._key_app_style, 2)
-
+        value = self.setdefault(self._key_app_style, AppStyle.Windows.value)
+        # 从 JSON 读回来是裸 int，还原成枚举再交给调用方，
+        # 否则 AppStyle.WindowsVista.name 这类访问会失败。
+        return coerce_enum(value, AppStyle, AppStyle.Windows)
+    
     @app_style.setter
     def app_style(self, value):
         assert isinstance(value, AppStyle)
-        self[self._key_app_style] = value
+        self[self._key_app_style] = int(value)
 
     @property
     def window_size(self):
-        return self.setdefault(self._key_window_size, (260, 320))
+        return coerce_size(
+            self.setdefault(self._key_window_size, (260, 320)), (260, 320)
+        )
 
     @window_size.setter
     def window_size(self, value):

@@ -4,9 +4,9 @@ from fastpip import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from settings import *
-from ui import *
-from utils import *
+from ..settings import *
+from ..ui import *
+from ..utils import *
 
 from .messagebox import MessageBox
 
@@ -54,7 +54,7 @@ class IndexUrlManagerWindow(Ui_index_manager, QMainWindow):
 
     def closeEvent(self, event: QCloseEvent):
         self.__store_window_size()
-        self.__config.save_config()
+        save_config_or_warn(self.__config, self)
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() == Qt.Key_Escape:

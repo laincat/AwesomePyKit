@@ -2,7 +2,7 @@
 
 from typing import Sequence
 
-from .abstract_config import AbstractConfig
+from .abstract_config import AbstractConfig, coerce_size
 from .package_manager import get_shared_pypaths
 
 
@@ -188,9 +188,10 @@ class PackageDownloadConfig(AbstractConfig):
 
     @property
     def window_size(self):
-        if self._key_window_size not in self:
-            self[self._key_window_size] = 620, 660
-        return self[self._key_window_size]
+        return coerce_size(
+            self.setdefault(self._key_window_size, (620, 660)),
+            (620, 660),
+        )
 
     @window_size.setter
     def window_size(self, value):
@@ -201,9 +202,10 @@ class PackageDownloadConfig(AbstractConfig):
 
     @property
     def dlstatus_winsize(self):
-        if self._key_dlstatus_winsize not in self:
-            self[self._key_dlstatus_winsize] = 260, 500
-        return self[self._key_dlstatus_winsize]
+        return coerce_size(
+            self.setdefault(self._key_dlstatus_winsize, (260, 500)),
+            (260, 500),
+        )
 
     @dlstatus_winsize.setter
     def dlstatus_winsize(self, value):
