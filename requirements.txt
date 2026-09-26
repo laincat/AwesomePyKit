@@ -2,4 +2,6 @@ PyQt5>=5.15.2
 pywin32>=224
 fastpip>=1.7,<2.0
 chardet>=4.0.0
-importlib-metadata>=6.1.0; python_version<'3.8'
+# 这一行原本是给 Python 3.7 用的回退（那时 importlib.metadata 还是 importlib_metadata
+# 这个第三方包）。既然 requires-python 已提升到 >=3.9（3.8 起标准库自带
+# importlib.metadata），该条件永远不会成立，故移除。

@@ -14,17 +14,26 @@ classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Environment :: Win32 (MS Windows)",
     "Operating System :: Microsoft :: Windows :: Windows 7",
     "Operating System :: Microsoft :: Windows :: Windows 10",
     "Operating System :: Microsoft :: Windows :: Windows 11",
 ]
 description = "关于Python的GUI工具箱：包管理、程序打包、切换Pip源、分发包下载、云函数打包"
-requires-python = ">=3.7"
+# 下限取 3.9：
+#   · 依赖链实际支持到 3.9 —— PyQt5-sip 的新版本要 3.10、chardet 7.x 要 3.10、
+#     pywin32 的新版本要 3.9，3.7/3.8 会被静默降级到旧版本；
+#   · 3.7 与 3.8 均已于 2023、2024 年终止支持；
+#   · CI 实测覆盖 3.9 ~ 3.14，3.9 上依赖可完整安装且程序能正常启动。
+# 原来声明 >=3.7 与实际情况不符：pip 会放行，随后在解析依赖时失败，
+# 而错误信息指向依赖、看不出根因是 Python 版本太低。
+requires-python = ">=3.9"
 dynamic = ["dependencies", "version"]
 
 [project.scripts]
@@ -32,7 +41,7 @@ rpk = "awespykit.runpykit:runpykit_and_sysexit"
 
 [tool.black]
 line-length = 80
-target-version = ["py37"]
+target-version = ["py39"]
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
