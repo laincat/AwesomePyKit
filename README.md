@@ -133,3 +133,49 @@
 [可能会添加或删除的功能](./TODO.md)
 
 <br/>
+
+---
+
+## 开发与贡献
+
+### 环境准备
+
+```cmd
+pip install -r requirements-dev.txt
+```
+
+### 常用命令
+
+```cmd
+ruff check src/ tests/ packaging/        :: 静态检查
+python -m pytest tests                   :: 测试（含无头冒烟测试，不需要显示器）
+python -m build --outdir dist-python     :: 构建 pip 分发包
+python packaging/make_version_info.py    :: 生成 exe 的版本信息文件
+python -m PyInstaller --noconfirm packaging/awespykit.spec   :: 构建单文件 exe
+```
+
+测试与 CI 都是无头运行的（QT_QPA_PLATFORM=offscreen），所以在没有图形界面的
+环境（CI、远程终端）里也能跑。
+
+### 发布流程
+
+发布不需要在本地打包，也不需要手工上传文件。在 GitHub 上创建一个 release
+（打 tag）之后，发布工作流会自动完成四件事：
+
+1. 构建 sdist 与 wheel；
+2. 构建 Windows 单文件 exe，并启动它做一次冒烟测试；
+3. 计算全部产物的 SHA256 校验和；
+4. 把上述文件全部上传为该 release 的附件。
+
+标签需要是合法的版本号，例如 v2.1.2、v2.1.2-rc1。工作流会先把标签规范化为
+PEP 440 版本号；若标签无法转换（例如 v2.1.1-test），会在第一步就明确报错并
+指出原因。
+
+只想验证打包配置、不想发布时，手动触发该工作流（workflow_dispatch）即可 ——
+产物只留在 Actions 的 artifact 里。
+
+### 依赖自动更新
+
+Dependabot 每周检查 requirements*.txt 与 workflow 里引用的 Action。patch 级
+更新会在 CI 通过后自动合并；minor 与 major 会留给人看，因为这个项目要把 exe
+发给真实用户，打包工具链的版本变化需要人工确认。

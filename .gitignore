@@ -169,6 +169,10 @@ cython_debug/
 # 在制品目录（由上一个 .gitignore 段落的 dist/ 规则覆盖不到的工作目录）
 /build/
 
+# 发布产物验证时下载下来的临时文件
+/.relcheck/
+/.git-commit-msg.tmp
+
 # 上面的 PyInstaller 段落忽略了 *.spec（模板假定它是构建时生成的），
 # 但本仓库的 packaging/awespykit.spec 是手工维护、需要入库的构建配置。
 !/packaging/awespykit.spec
