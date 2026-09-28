@@ -7,6 +7,11 @@ from ..ui import *
 
 from ..logic.messagebox import MessageBox
 
+# 原作者自 2024-10 起停止更新，本仓库继续维护。因此：
+#   · 界面上的作者栏区分为「原作者」与「维护者」（文案在 .ui 里）；
+#   · 各处的链接指向本仓库 —— 原仓库不会再有更新，把用户引过去只会造成困惑。
+_REPO_GITHUB = "https://github.com/laincat/AwesomePyKit"
+
 
 class AboutWindow(Ui_about_window, QMainWindow):
     def __init__(self, parent, appversion: str):
@@ -27,19 +32,17 @@ class AboutWindow(Ui_about_window, QMainWindow):
         if event.type() == QEvent.MouseButtonRelease:
             hyperlink = None
             if obj == self.uiLabel_app_version:
-                hyperlink = "https://gitee.com/hrpzcf/AwesomePyKit/releases"
+                hyperlink = f"{_REPO_GITHUB}/releases"
             elif obj == self.uiLabel_issue_gitee:
-                hyperlink = "https://gitee.com/hrpzcf/AwesomePyKit/issues"
+                hyperlink = f"{_REPO_GITHUB}/issues"
             elif obj == self.uiLabel_issue_github:
-                hyperlink = "https://github.com/hrpzcf/AwesomePyKit/issues"
+                hyperlink = f"{_REPO_GITHUB}/issues"
             elif obj == self.uiLabel_source_gitee:
-                hyperlink = "https://gitee.com/hrpzcf/AwesomePyKit"
+                hyperlink = _REPO_GITHUB
             elif obj == self.uiLabel_source_github:
-                hyperlink = "https://github.com/hrpzcf/AwesomePyKit"
+                hyperlink = _REPO_GITHUB
             elif obj == self.uiLabel_license:
-                hyperlink = (
-                    "https://gitee.com/hrpzcf/AwesomePyKit/blob/main/LICENSE"
-                )
+                hyperlink = f"{_REPO_GITHUB}/blob/main/LICENSE"
             if hyperlink is not None and not QDesktopServices.openUrl(
                 QUrl(hyperlink)
             ):

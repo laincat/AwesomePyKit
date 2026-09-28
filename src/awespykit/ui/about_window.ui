@@ -166,7 +166,7 @@
             </font>
            </property>
            <property name="text">
-            <string>作者：</string>
+            <string>原作者：</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -189,6 +189,39 @@
           </widget>
          </item>
          <item row="2" column="0">
+          <widget class="QLabel" name="label_maintainer">
+           <property name="font">
+            <font>
+             <family>Microsoft YaHei UI</family>
+             <pointsize>9</pointsize>
+             <weight>50</weight>
+             <bold>false</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>维护者：</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLabel" name="uiLabel_maintainer">
+           <property name="font">
+            <font>
+             <family>Microsoft YaHei UI</family>
+             <pointsize>9</pointsize>
+             <weight>50</weight>
+             <bold>false</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Laincat</string>
+           </property>
+          </widget>
+         </item>
+                  <item row="3" column="0">
           <widget class="QLabel" name="label_2">
            <property name="font">
             <font>
@@ -206,7 +239,7 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="1">
+         <item row="3" column="1">
           <widget class="QLabel" name="uiLabel_license">
            <property name="palette">
             <palette>
@@ -261,7 +294,7 @@
            </property>
           </widget>
          </item>
-         <item row="3" column="0">
+         <item row="4" column="0">
           <widget class="QLabel" name="label_7">
            <property name="font">
             <font>
@@ -279,7 +312,7 @@
            </property>
           </widget>
          </item>
-         <item row="3" column="1">
+         <item row="4" column="1">
           <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,1">
            <item>
             <widget class="QLabel" name="uiLabel_source_github">
@@ -332,7 +365,7 @@
               <cursorShape>PointingHandCursor</cursorShape>
              </property>
              <property name="text">
-              <string>GitHub、</string>
+              <string>GitHub</string>
              </property>
             </widget>
            </item>
@@ -387,13 +420,13 @@
               <cursorShape>PointingHandCursor</cursorShape>
              </property>
              <property name="text">
-              <string>Gitee</string>
+              <string></string>
              </property>
             </widget>
            </item>
           </layout>
          </item>
-         <item row="4" column="0">
+         <item row="5" column="0">
           <widget class="QLabel" name="label_8">
            <property name="font">
             <font>
@@ -411,7 +444,7 @@
            </property>
           </widget>
          </item>
-         <item row="4" column="1">
+         <item row="5" column="1">
           <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,1">
            <item>
             <widget class="QLabel" name="uiLabel_issue_github">
@@ -464,7 +497,7 @@
               <cursorShape>PointingHandCursor</cursorShape>
              </property>
              <property name="text">
-              <string>GitHub Issues、</string>
+              <string>GitHub Issues</string>
              </property>
             </widget>
            </item>
@@ -519,7 +552,7 @@
               <cursorShape>PointingHandCursor</cursorShape>
              </property>
              <property name="text">
-              <string>Gitee Issues</string>
+              <string></string>
              </property>
             </widget>
            </item>
@@ -576,7 +609,7 @@
 
 名称：fastpip
 开源协议：MIT License
-主页：https://github.com/hrpzcf/fastpip
+主页：https://github.com/laincat/AwesomePyKit/tree/main/src/fastpip
 描述：封装 Python 环境及包管理工具 Pip
 
 名称：pywin32
