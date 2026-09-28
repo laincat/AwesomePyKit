@@ -5,33 +5,35 @@ __license__ = "GNU General Public License v3 (GPLv3)"
 import sys
 from functools import partial
 
+# ── 启动引导 ────────────────────────────────────────────────────────────────
+#
+# 本程序需要同时支持三种启动方式：
+#   1. 控制台脚本 rpk（由 pyproject.toml 的 [project.scripts] 生成）
+#   2. python -m awespykit
+#   3. 直接运行本文件：python src/awespykit/runpykit.py
+#      （以及 PyInstaller 以本文件为入口脚本打包后的 exe）
+#
+# 第 3 种没有包上下文（__package__ 为空），相对导入会直接失败，因此本文件一律
+# 使用「以包名开头」的绝对导入。
+#
+# 但绝对导入要求 src 目录位于 sys.path 上。前两种方式由安装器或 Python 自身
+# 保证；直接运行脚本时没有这层保证，所以在这里补上 —— 而且必须在导入
+# awespykit 与 fastpip 之前执行（fastpip 也放在 src/ 下，是本仓库 vendored 的
+# 副本，不从 PyPI 安装）。
+if __package__ in (None, ""):
+    from os import path as _path
+
+    # __file__ 是 .../src/awespykit/runpykit.py，上溯两级即 src
+    _src_dir = _path.dirname(_path.dirname(_path.abspath(__file__)))
+    if _path.isdir(_path.join(_src_dir, "awespykit")) and (
+        _src_dir not in sys.path
+    ):
+        sys.path.insert(0, _src_dir)
+
 from fastpip import VERNUM
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-
-# 这个文件是本程序的入口，需要同时支持三种启动方式：
-#   1. 控制台脚本 rpk（由 pyproject.toml 的 [project.scripts] 生成）
-#   2. python -m awespykit
-#   3. 直接运行本文件：python src/awespykit/runpykit.py（以及 PyInstaller 打包后
-#      以本文件为入口脚本运行）
-#
-# 第 3 种方式没有包上下文（__package__ 为空），相对导入会直接失败，所以本文件
-# 一律使用「以包名开头」的绝对导入。这样无论以哪种方式启动，导入都能成立，
-# 也不需要额外做一次 runpy 重定向 —— 那种做法在包路径推导不如预期时，会抛出
-# “No module named 'awespykit'” 这种指向前提条件、很难排查的错误。
-#
-# 直接运行脚本时，包目录的父目录（即项目的 src 目录）需要位于 sys.path 上。
-# 这里按 __file__ 推导并补上；推导不出来时不做任何事，让下面的导入语句给出
-# 原本的错误信息（而不是被这层逻辑掩盖）。
-if __package__ in (None, ""):
-    from os import path as _path
-
-    _pkg_parent = _path.dirname(_path.dirname(_path.abspath(__file__)))
-    if _path.isdir(_path.join(_pkg_parent, "awespykit")) and (
-        _pkg_parent not in sys.path
-    ):
-        sys.path.insert(0, _pkg_parent)
 
 from awespykit.__info__ import *
 from awespykit.com import *

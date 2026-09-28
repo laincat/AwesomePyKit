@@ -158,6 +158,15 @@ python src\awespykit\runpykit.py
 
 ---
 
+### 关于 fastpip
+
+本程序包管理功能的核心依赖 fastpip（https://github.com/hrpzcf/fastpip）的源码已 **vendored 进本仓库**（src/fastpip/），随程序一起打包安装，不再从 PyPI 拉取。
+
+原因：fastpip 上游自 2023-03 起停止更新，其源码中存在无效转义序列 —— Python 3.12 起报 SyntaxWarning，将来的版本会升级为 SyntaxError，届时程序会无法导入。本仓库在其 1.7.0 基础上修复了这些问题，版本号记为 1.7.1。
+
+因此 requirements.txt 里刻意不声明 fastpip：若声明，pip 会从 PyPI 再装一份同名包，与本仓库的副本装进同一目录互相覆盖，实际生效的是哪一份取决于安装顺序。
+
+上游许可是 MIT（见 src/fastpip/LICENSE），vendored 副本保留其原始署名。
 ## 常见问题
 
 **Q：双击 exe 没反应？**

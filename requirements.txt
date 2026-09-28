@@ -1,7 +1,11 @@
 PyQt5>=5.15.2
 pywin32>=224
-fastpip>=1.7,<2.0
 chardet>=4.0.0
-# 这一行原本是给 Python 3.7 用的回退（那时 importlib.metadata 还是 importlib_metadata
-# 这个第三方包）。既然 requires-python 已提升到 >=3.9（3.8 起标准库自带
-# importlib.metadata），该条件永远不会成立，故移除。
+# psutil 是 fastpip 的依赖。fastpip 已 vendored 到 src/fastpip/（见下方说明），
+# 不再作为 PyPI 依赖自动带入，因此这里显式声明。
+psutil>=5.7.2
+
+# 注意：这里刻意不列 fastpip 本身。
+# 它的上游自 2023-03 起停更，本仓库已把源码 vendored 到 src/fastpip/ 一并打包
+# （见 pyproject.toml）。若这里仍声明 fastpip，pip 会从 PyPI 再装一份同名包，
+# 与本仓库的副本装进同一个目录而互相覆盖 —— 实际导入到哪个版本取决于安装顺序。

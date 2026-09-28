@@ -32,7 +32,9 @@ def test_newer_patch_version_is_accepted():
 def test_older_version_is_rejected_with_guidance():
     message = check_fastpip_version((REQ_FPVER[0], REQ_FPVER[1] - 1, 0))
     assert message, '版本过低时必须返回提示'
-    assert 'pip install' in message, '提示里应给出可执行的解决办法'
+    # fastpip 已 vendored 进本程序，正常情况下不该出现版本过低。
+    # 提示要指向「环境里残留了旧版本」这个真实原因，并给出卸载命令。
+    assert 'pip uninstall' in message, '提示里应给出可执行的解决办法'
 
 
 def test_different_major_version_is_rejected():
