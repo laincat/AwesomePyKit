@@ -172,7 +172,10 @@ def _should_drop(entry):
 _before = len(a.binaries)
 a.binaries = TOC([e for e in a.binaries if not _should_drop(e)])
 _dropped = _before - len(a.binaries)
-print(f'[spec] 精简二进制：移除 {_dropped} 个（{_before} -> {len(a.binaries)}）')
+# 输出刻意用 ASCII：spec 是在 PyInstaller 进程里执行的，而 GitHub 的 Windows
+# runner 控制台编码是 cp1252，打印中文会抛 UnicodeEncodeError 并中断构建
+# （这一条踩过两次，第一次在 packaging/make_version_info.py 里）。
+print(f'[spec] slimmed binaries: removed {_dropped} ({_before} -> {len(a.binaries)})')
 
 exe = EXE(
     pyz,
