@@ -44,6 +44,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
+      - name: 验证依赖自动合并条件
+        run: python -m unittest discover -s .github/scripts
+
       - name: 静态检查（ruff）
         run: python -m ruff check src/ tests/ packaging/
 
@@ -91,7 +94,7 @@ jobs:
         run: |
           # 窗口程序不会自己退出，能撑过 15 秒就说明加载成功了；
           # 若资源或子包缺失，进程会在启动瞬间退出，这里就会失败。
-          $proc = Start-Process -FilePath 'dist/Awespykit.exe' -PassThru
+          $proc = Start-Process -FilePath 'dist/Awespykit.exe' -PassThru -WindowStyle Hidden
           Start-Sleep -Seconds 15
           if ($proc.HasExited) {
             Write-Error "exe 提前退出，退出码 $($proc.ExitCode)"
