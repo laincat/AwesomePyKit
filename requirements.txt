@@ -3,7 +3,7 @@ pywin32>=312; sys_platform == "win32"
 chardet>=4.0.0
 # psutil 是 fastpip 的依赖。fastpip 已 vendored 到 src/fastpip/（见下方说明），
 # 不再作为 PyPI 依赖自动带入，因此这里显式声明。
-psutil>=5.7.2
+psutil>=7.2.2
 
 # 注意：这里刻意不列 fastpip 本身。
 # 它的上游自 2023-03 起停更，本仓库已把源码 vendored 到 src/fastpip/ 一并打包
