@@ -3,5 +3,5 @@
 
 pytest>=7.4
 ruff>=0.6
-build>=1.2
+build>=1.6.1
 pyinstaller>=6.6
