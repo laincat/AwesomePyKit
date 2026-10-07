@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools-scm[toml]>=7.1", "setuptools>=67.6"]
+requires = ["setuptools-scm[toml]>=7.1", "setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,11 +9,11 @@ authors = [
     { name = "hrpzcf", email = "pphrp@qq.com" },
 ]
 readme = "README.md"
-license = { text = "GPLv3" }
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
 classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -49,6 +49,9 @@ local_scheme = "no-local-version"
 [tool.setuptools]
 platforms = ["win32", "win_amd64"]
 include-package-data = false
+
+[tool.setuptools.package-data]
+fastpip = ["LICENSE"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = "requirements.txt"}

@@ -151,6 +151,7 @@ cython_debug/
 
 # 构建产物（PyInstaller / python -m build / CI）
 /dist-python/
+/dist-python-*/
 /packaging/version_info.txt
 *.egg-info/
 

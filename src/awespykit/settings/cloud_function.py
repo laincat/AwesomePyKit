@@ -33,7 +33,12 @@ class CloudFunctionCFG(dict):
 
     @property
     def project_paths(self) -> List[str]:
-        return coerce_str_list(self.setdefault(self._key_project_paths, []))
+        # 写回配置再返回：界面上添加/删除项目路径是就地 append/del，
+        # 返回副本会让这些修改落在临时列表上，配置存不下来。
+        self[self._key_project_paths] = coerce_str_list(
+            self.setdefault(self._key_project_paths, [])
+        )
+        return self[self._key_project_paths]
 
     @project_paths.setter
     def project_paths(self, value):
@@ -137,7 +142,10 @@ class CloudFunctionCFG(dict):
 
     @property
     def excluded_paths(self) -> List[str]:
-        return coerce_str_list(self.setdefault(self._key_excluded_paths, []))
+        self[self._key_excluded_paths] = coerce_str_list(
+            self.setdefault(self._key_excluded_paths, [])
+        )
+        return self[self._key_excluded_paths]
 
     @excluded_paths.setter
     def excluded_paths(self, value):

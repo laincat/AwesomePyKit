@@ -28,11 +28,16 @@ def _force_utf8_output():
 
 # 这些名字只允许出现在 awespykit/ 目录里面
 PRIVATE_TOP_LEVEL = ('com', 'logic', 'settings', 'ui', 'utils')
+REQUIRED_WHEEL_FILES = ('fastpip/LICENSE',)
 
 
 def check_wheel(wheel: Path) -> list:
     problems = []
     with zipfile.ZipFile(wheel) as archive:
+        names = set(archive.namelist())
+        for required in REQUIRED_WHEEL_FILES:
+            if required not in names:
+                problems.append(f'缺少必需文件: {required}')
         for name in archive.namelist():
             parts = name.split('/')
             if len(parts) > 1 and parts[0] in PRIVATE_TOP_LEVEL:
@@ -56,7 +61,7 @@ def main(argv=None) -> int:
         problems = check_wheel(wheel)
         if problems:
             exit_code = 1
-            print(f'{wheel.name}: 发现不该发布的顶层模块：')
+            print(f'{wheel.name}: 发现分发包内容问题：')
             for name in problems[:20]:
                 print('   ', name)
             if len(problems) > 20:

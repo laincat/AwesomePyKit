@@ -57,6 +57,11 @@ def coerce_str_list(value, default=None):
     配置被手工改坏或版本升级后，字段可能是字符串（'a,b' 或 '/path'）、
     含非字符串元素的列表、None 等。若直接返回，调用方遍历时会按字符拆开
     （'abc' 会变成 'a','b','c'），或在拼接路径时抛 TypeError。
+
+    返回的是规范化后的**新**列表。属性 getter 必须把它写回配置再返回，
+    否则调用方拿到的是临时副本：``config.pypaths.append(...)``、
+    ``del config.pypaths[i]`` 这类就地修改会丢在副本上 —— 界面显示操作
+    成功，重新打开配置却又回到原样。
     """
     if default is None:
         default = []

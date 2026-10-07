@@ -45,7 +45,11 @@ class PackageManagerConfig(AbstractConfig):
     def pypaths(self) -> list:
         if self._key_python_paths not in self:
             self[self._key_python_paths] = list()
-        return coerce_str_list(self[self._key_python_paths])
+        # 写回配置再返回，调用方拿到的必须是配置自己持有的那个 list：
+        # 界面上「添加/删除 Python 环境」是就地 append/del 操作的，
+        # 返回副本会让这些操作丢在临时对象上，配置永远存不下来。
+        self[self._key_python_paths] = coerce_str_list(self[self._key_python_paths])
+        return self[self._key_python_paths]
 
     @pypaths.setter
     def pypaths(self, value: Iterable):
