@@ -1,7 +1,9 @@
 # 开发/CI 专用依赖（不进入分发包的运行时依赖）
 -r requirements.txt
 
-pytest>=7.4
+# pytest 9 requires Python >=3.10; keep the Python 3.9 CI job supported.
+pytest>=7.4,<9; python_version < "3.10"
+pytest>=9.1.1; python_version >= "3.10"
 ruff>=0.6
 build>=1.2
 pyinstaller>=6.6
