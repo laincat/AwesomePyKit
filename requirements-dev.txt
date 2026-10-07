@@ -5,5 +5,7 @@
 pytest>=7.4,<9; python_version < "3.10"
 pytest>=9.1.1; python_version >= "3.10"
 ruff>=0.6
-build>=1.2
+# build 1.5 requires Python >=3.10; use the compatible series on Python 3.9.
+build>=1.2,<1.5; python_version < "3.10"
+build>=1.6.1; python_version >= "3.10"
 pyinstaller>=6.6
