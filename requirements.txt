@@ -1,6 +1,6 @@
 PyQt5>=5.15.2
 pywin32>=312; sys_platform == "win32"
-chardet>=4.0.0
+chardet>=7.6.0
 # psutil 是 fastpip 的依赖。fastpip 已 vendored 到 src/fastpip/（见下方说明），
 # 不再作为 PyPI 依赖自动带入，因此这里显式声明。
 psutil>=7.2.2
