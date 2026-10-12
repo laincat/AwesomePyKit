@@ -54,9 +54,9 @@ class PackageManagerConfig(AbstractConfig):
     @pypaths.setter
     def pypaths(self, value: Iterable):
         assert isinstance(value, Iterable)
+        value = list(value)
         assert all(isinstance(i, str) for i in value)
-        self[self._key_python_paths].clear()
-        self[self._key_python_paths].extend(value)
+        self.pypaths[:] = value
 
     @property
     def include_pre(self):

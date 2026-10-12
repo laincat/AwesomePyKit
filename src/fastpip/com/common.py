@@ -58,13 +58,13 @@ def decode_bytes(__bytes: bytes):
         return __bytes.decode(__lpc)
     except UnicodeDecodeError as exc:
         string = f"{string}\t{exc.reason}\n"
-    encoding = detect(__bytes)
-    if encoding is None:
+    encoding = detect(__bytes).get("encoding")
+    if not encoding:
         return string
     try:
         return __bytes.decode(encoding)
-    except UnicodeDecodeError as exc:
-        string = f"{string}\t{exc.reason}\n"
+    except (UnicodeDecodeError, LookupError) as exc:
+        string = f"{string}\t{exc}\n"
     return string
 
 

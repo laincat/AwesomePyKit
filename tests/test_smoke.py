@@ -67,3 +67,19 @@ def test_main_window_can_be_constructed(rpk):
         assert window.windowTitle() == rpk.APP_NAME
     finally:
         window.deleteLater()
+
+
+def test_about_window_uses_installed_chardet_license(rpk):
+    from importlib.metadata import metadata
+    from awespykit.logic.about_window import AboutWindow
+
+    window = AboutWindow(None, "test")
+    try:
+        license_text = metadata("chardet").get(
+            "License-Expression", "LGPL-2.1-or-later"
+        )
+        assert f"开源协议：{license_text}" in (
+            window.uiPlainTextEdit_open_packages.toPlainText()
+        )
+    finally:
+        window.deleteLater()
