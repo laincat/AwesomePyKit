@@ -1,27 +1,6 @@
-﻿name: 发布
+name: 发布
 
-# ── 这个工作流会在什么时候、把东西放到哪里 ──────────────────────────────────
-#
-# ① 每次推送到 main（默认）：自动发布一份「滚动开发版」到 Releases。
-#    地址固定为 https://github.com/<仓库>/releases/tag/dev-latest
-#    每轮构建都会用新产物**覆盖**同名附件，所以用户在 Releases 页面上永远只看到
-#    一条开发版记录，而下载地址恒定不变 —— 不用每次去翻最新的 tag。
-#
-# ② 手动创建 release（打 tag）：把产物附件补到**那一条** release 上。
-#    这才是正式发版：tag 是你自己起的版本号，附件不会与开发版混淆。
-#
-# ③ 手动触发（workflow_dispatch）：只构建、不上传，产物留在 Actions 的
-#    artifact 里（保留 14 天），适合验证打包配置。
-#
-# ── 为什么开发版用固定 tag 而不是每次一个 tag ─────────────────────────────
-# 每次一个 tag 的话，Releases 与 Tags 页面会迅速堆满几百条记录；而且 tag 若是
-# 2.1.1.dev7 这种带 .devX 的版本号，会让 setuptools_scm 直接构建失败：
-#     ValueError: choosing custom numbers for the `.devX` distance is not supported
-#     The 2.1.1.dev7 can't be bumped
-# 固定用 dev-latest 这个**不是版本号**的标签则完全无副作用 —— setuptools_scm
-# 会忽略它，照常从正式版本标签推导出 2.1.1.devN 这样的开发版本号。
-#
-# 开发版**不会**被标成 latest：这样 releases/latest 仍然指向正式发版。
+# main 推送和手动触发只构建；正式 Release 验证后保留最新一版。
 
 on:
   push:
@@ -44,8 +23,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # 循环更新用的固定 tag（刻意不是合法版本号，避免干扰 setuptools_scm）
-  ROLLING_TAG: dev-latest
+  RELEASE_TAG: ${{ github.event.release.tag_name }}
+  INPUT_VERSION: ${{ inputs.version }}
 
 jobs:
   # ----------------------------------------------------------------
@@ -55,7 +34,7 @@ jobs:
     name: 构建 Python 分发包
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.value }}
+      version: ${{ steps.actual.outputs.value }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -79,17 +58,16 @@ jobs:
         run: |
           set -euo pipefail
           # 只有「手动打 tag 发正式版」时才显式指定版本号。
-          # 滚动开发版留空，交给 setuptools_scm 从 git 标签推导。
+          # 开发构建交给 setuptools_scm 从 git 标签推导。
           if [ '${{ github.event_name }}' = 'release' ]; then
-            raw='${{ github.event.release.tag_name }}'
-          elif [ -n '${{ inputs.version }}' ]; then
-            raw='${{ inputs.version }}'
+            raw="$RELEASE_TAG"
+          elif [ -n "$INPUT_VERSION" ]; then
+            raw="$INPUT_VERSION"
           else
             raw=''
           fi
 
-          # 滚动标签不是版本号，不能拿去当版本号用
-          if [ -n "$raw" ] && [ "$raw" != "$ROLLING_TAG" ]; then
+          if [ -n "$raw" ]; then
             # 标签是自由文本，必须先转成合法 PEP 440 版本号；直接丢给 setuptools
             # 会在构建深处抛 InvalidVersion，日志里看不出是标签命名的问题。
             version="$(python packaging/normalize_version.py "$raw")"
@@ -159,14 +137,14 @@ jobs:
         run: |
           set -euo pipefail
           if [ '${{ github.event_name }}' = 'release' ]; then
-            raw='${{ github.event.release.tag_name }}'
-          elif [ -n '${{ inputs.version }}' ]; then
-            raw='${{ inputs.version }}'
+            raw="$RELEASE_TAG"
+          elif [ -n "$INPUT_VERSION" ]; then
+            raw="$INPUT_VERSION"
           else
             raw=''
           fi
 
-          if [ -n "$raw" ] && [ "$raw" != "$ROLLING_TAG" ]; then
+          if [ -n "$raw" ]; then
             version="$(python packaging/normalize_version.py "$raw")"
             echo "value=${version}" >> "$GITHUB_OUTPUT"
             echo "AWESPY_VERSION=${version}" >> "$GITHUB_ENV"
@@ -215,7 +193,7 @@ jobs:
         run: |
           # exe 是窗口程序，不会自己退出。能撑过 15 秒 = 资源与子包都加载成功；
           # 只要缺资源或缺子包，进程会在启动瞬间就死掉，这里立刻失败。
-          $proc = Start-Process -FilePath 'dist/Awespykit.exe' -PassThru
+          $proc = Start-Process -FilePath 'dist/Awespykit.exe' -PassThru -WindowStyle Hidden
           Start-Sleep -Seconds 15
           if ($proc.HasExited) {
             Write-Error "exe 启动即退出（退出码 $($proc.ExitCode)），打包内容可能不完整"
@@ -248,159 +226,35 @@ jobs:
   # ----------------------------------------------------------------
   publish:
     name: 发布到 Release
-    # 手动触发只构建不上传（产物在 artifact 里）
-    if: github.event_name != 'workflow_dispatch' || inputs.version != ''
+    if: github.event_name == 'release'
     needs: [build-python-dist, build-windows-exe]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-
       - uses: actions/download-artifact@v8
         with:
           path: artifacts
-
-      - name: 确定目标 release
-        id: target
+      - name: 整理附件并检查版本一致
         shell: bash
+        env:
+          PYTHON_VERSION: ${{ needs.build-python-dist.outputs.version }}
+          EXE_VERSION: ${{ needs.build-windows-exe.outputs.version }}
         run: |
           set -euo pipefail
-          if [ '${{ github.event_name }}' = 'release' ]; then
-            # 手动打 tag 发的正式版：附件就放到那一条上
-            tag='${{ github.event.release.tag_name }}'
-            prerelease='${{ github.event.release.prerelease }}'
-            echo "tag=${tag}" >> "$GITHUB_OUTPUT"
-            echo "prerelease=${prerelease}" >> "$GITHUB_OUTPUT"
-            echo "rolling=false" >> "$GITHUB_OUTPUT"
-            echo "目标：已有的正式 release ${tag}"
-          else
-            echo "tag=${ROLLING_TAG}" >> "$GITHUB_OUTPUT"
-            echo 'prerelease=true' >> "$GITHUB_OUTPUT"
-            echo 'rolling=true' >> "$GITHUB_OUTPUT"
-            echo "目标：滚动开发版 ${ROLLING_TAG}"
-          fi
-
-      - name: 整理附件
-        shell: bash
-        run: |
-          set -euo pipefail
+          test "$PYTHON_VERSION" = "$EXE_VERSION"
           mkdir -p upload
           cp artifacts/python-dist/* upload/
-          cp artifacts/windows-exe/Awespykit.exe upload/
-          cp artifacts/windows-exe/Awespykit.exe.sha256 upload/
+          cp artifacts/windows-exe/* upload/
           cd upload
           sha256sum *.tar.gz *.whl > python-dist.sha256
-          cd ..
-          ls -lh upload
-
-      - name: 准备发布说明
+      - name: 上传正式版附件
         shell: bash
-        env:
-          VER: ${{ needs.build-windows-exe.outputs.version }}
-        run: |
-          set -euo pipefail
-          REPO="$GITHUB_REPOSITORY"
-          TAG='${{ steps.target.outputs.tag }}'
-          if [ '${{ steps.target.outputs.rolling }}' = 'true' ]; then
-            {
-              echo "这是从 \`main\` 分支最新代码自动构建的开发版，**每有新提交就滚动覆盖**。\`dev-latest\` 这个标签是固定的，所以下面两个下载地址永远指向最新一版。"
-              echo ''
-              echo "当前版本：\`${VER}\`（版本号由 git 提交历史推导）"
-              echo "对应提交：\`${GITHUB_SHA:0:7}\`"
-              echo ''
-              echo '> 开发版只保证「能构建、能启动」，功能正确性请以正式发版为准。'
-              echo '> 需要稳定版本请到 Releases 页面找带版本号的正式 release。'
-            } > notes.md
-          else
-            echo "正式发版 ${TAG}，产物由 GitHub Actions 自动构建并上传。" > notes.md
-          fi
-          echo '' >> notes.md
-          echo '| 文件 | 说明 |' >> notes.md
-          echo '|---|---|' >> notes.md
-          echo '| `Awespykit.exe` | Windows 单文件可执行程序，双击即可运行，无需安装 Python |' >> notes.md
-          echo '| `Awespykit.exe.sha256` | exe 的 SHA256 校验和 |' >> notes.md
-          echo '| `awespykit-*.whl` | Python 分发包（`pip install` 用） |' >> notes.md
-          echo '| `awespykit-*.tar.gz` | 源码分发包 |' >> notes.md
-          echo '| `python-dist.sha256` | 两个 Python 分发包的 SHA256 校验和 |' >> notes.md
-          echo '' >> notes.md
-          echo '校验下载文件是否完整（PowerShell）：' >> notes.md
-          echo '' >> notes.md
-          echo '```powershell' >> notes.md
-          echo 'Get-FileHash .\Awespykit.exe -Algorithm SHA256' >> notes.md
-          echo '```' >> notes.md
-          echo '' >> notes.md
-          echo '也可以直接 `pip install Awespykit -U`，或 `pip install` 上面那个 whl 文件。' >> notes.md
-          echo '' >> notes.md
-          echo "固定下载地址：https://github.com/${REPO}/releases/download/${TAG}/Awespykit.exe" >> notes.md
-          cat notes.md
-
-      - name: 首次创建 release（仅滚动开发版需要）
-        if: steps.target.outputs.rolling == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.target.outputs.tag }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "release ${TAG} 已存在，稍后直接覆盖附件"
-          else
-            # --latest=false 很关键：否则开发版会抢走 releases/latest 指针，
-            # 让「最新正式版」指向一个开发构建。
-            gh release create "$TAG" \
-              --title '开发版（自动构建，滚动更新）' \
-              --notes-file notes.md \
-              --prerelease \
-              --latest=false \
-              --target main
-            echo "已创建 release ${TAG}"
-          fi
-
-      - name: 清空旧附件
-        if: steps.target.outputs.rolling == 'true'
+        run: gh release upload "$RELEASE_TAG" upload/* --clobber
+      - name: 验证发布并清理旧版本
+        if: github.event.release.prerelease == false
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.target.outputs.tag }}
-        shell: bash
-        run: |
-          set -uo pipefail
-          # 必须清空：滚动更新时版本号会变（例如 2.1.1.dev7 -> dev8），
-          # 直接上传会留下上一版的 wheel / tar.gz，用户会分不清哪个是当前的。
-          gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null \
-            | while read -r name; do
-                [ -z "$name" ] && continue
-                echo "删除旧附件：$name"
-                gh release delete-asset "$TAG" "$name" --yes || true
-              done
-          echo '清空完成'
-
-      - name: 上传附件
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.target.outputs.tag }}
-          IS_RELEASE: ${{ github.event_name == 'release' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ "$IS_RELEASE" = 'true' ]; then
-            # 正式发版：同版本重跑时覆盖同名附件，避免出现 -1/-2 后缀的重复文件
-            gh release upload "$TAG" upload/* --clobber
-          else
-            # 滚动开发版：上一步已清空，直接上传，并且刷新说明文字
-            gh release upload "$TAG" upload/*
-            gh release edit "$TAG" --notes-file notes.md
-          fi
-          echo '当前附件：'
-          gh release view "$TAG" --json assets --jq '.assets[] | "  \(.name)\t\(.size) bytes"'
-
-      - name: 小结
-        if: always()
-        shell: bash
-        run: |
-          {
-            echo '### 发布结果'
-            echo ''
-            echo "- 实际版本号：${{ needs.build-windows-exe.outputs.version }}"
-            echo "- 目标 tag：${{ steps.target.outputs.tag }}"
-            echo "- 对应提交：${{ github.sha }}"
-            echo "- 下载地址：https://github.com/${GITHUB_REPOSITORY}/releases/download/${{ steps.target.outputs.tag }}/Awespykit.exe"
-          } >> "$GITHUB_STEP_SUMMARY"
+          RELEASE_VERSION: ${{ needs.build-windows-exe.outputs.version }}
+        run: python3 .github/scripts/prune_releases.py

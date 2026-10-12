@@ -10,6 +10,8 @@ sys.path.insert(0, str(SRC_ROOT))
 from awespykit.settings.cloud_function import CloudFunctionCFG
 from awespykit.settings.package_download import PackageDownloadConfig
 from awespykit.settings.package_manager import PackageManagerConfig
+from awespykit.settings.package_manager import get_shared_pypaths
+from awespykit.settings.abstract_config import AbstractConfig
 
 
 def _dict_backed_config(cls):
@@ -62,3 +64,19 @@ def test_package_download_list_properties_are_config_backed():
     assert cfg["package_names"] == ["requests", "urllib3"]
     assert cfg["platform"] == ["win_amd64", "any"]
     assert cfg["abis"] == []
+
+
+def test_shared_python_paths_stay_current_and_save(tmp_path, monkeypatch):
+    monkeypatch.setattr(AbstractConfig, "root", tmp_path)
+    cfg = PackageManagerConfig()
+    shared = get_shared_pypaths()
+    cfg.pypaths.append("C:/Python313")
+    assert cfg.pypaths is shared
+    assert shared == ["C:/Python313"]
+    cfg.pypaths = cfg.pypaths
+    assert shared == ["C:/Python313"]
+    cfg.pypaths = (path for path in ["C:/Python314"])
+    assert shared == ["C:/Python314"]
+    assert cfg.save_config()
+    reloaded = PackageManagerConfig()
+    assert reloaded.pypaths == ["C:/Python314"]

@@ -58,18 +58,18 @@ def coerce_str_list(value, default=None):
     含非字符串元素的列表、None 等。若直接返回，调用方遍历时会按字符拆开
     （'abc' 会变成 'a','b','c'），或在拼接路径时抛 TypeError。
 
-    返回的是规范化后的**新**列表。属性 getter 必须把它写回配置再返回，
-    否则调用方拿到的是临时副本：``config.pypaths.append(...)``、
-    ``del config.pypaths[i]`` 这类就地修改会丢在副本上 —— 界面显示操作
-    成功，重新打开配置却又回到原样。
+    列表原地清理，保留其它窗口共享的引用；其它类型转换后由 getter 写回配置。
     """
     if default is None:
         default = []
     if isinstance(value, str):
         # 单个字符串按一行一项处理；空串视为空列表
         return [value] if value else []
-    if isinstance(value, (list, tuple)):
-        return [str(item) for item in value if isinstance(item, str)]
+    if isinstance(value, list):
+        value[:] = [item for item in value if isinstance(item, str)]
+        return value
+    if isinstance(value, tuple):
+        return [item for item in value if isinstance(item, str)]
     return list(default)
 
 

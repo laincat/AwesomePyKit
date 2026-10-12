@@ -10,8 +10,8 @@
 
 用法（在仓库根目录）：pyinstaller --noconfirm packaging/awespykit.spec
 '''
-import sys
 from pathlib import Path
+from PyInstaller.utils.hooks import copy_metadata
 
 # spec 文件执行时 __file__ 不可靠，用 SPECPATH 定位仓库根目录
 REPO_ROOT = Path(SPECPATH).resolve().parent
@@ -25,7 +25,10 @@ a = Analysis(
     # 放进搜索路径，让 PyInstaller 能解析到整个 awespykit 包。
     pathex=[str(REPO_ROOT / 'src')],
     binaries=[],
-    datas=[],
+    datas=copy_metadata('Awespykit') + copy_metadata('chardet') + [
+        (str(REPO_ROOT / 'src' / 'fastpip' / 'LICENSE'), 'fastpip'),
+        (str(REPO_ROOT / 'LICENSE'), '.'),
+    ],
     hiddenimports=[],
     # 只打包程序真正用到的东西。这个程序是纯 QtWidgets 界面，未使用 QML / Quick /
     # 网络 / WebSocket / 多媒体 / 定位等模块，但 PyQt5 的默认 hook 会把整套
@@ -71,7 +74,6 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     # 打包包元数据，让程序读到真实版本号
-    copy_metadata=['Awespykit'],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,

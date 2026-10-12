@@ -110,10 +110,12 @@ class MergeGateTests(unittest.TestCase):
 
     def test_validated_head_merges_and_dispatches(self):
         commands = self.run_gate()
-        self.assertEqual(len(commands), 2)
+        self.assertEqual(len(commands), 3)
         self.assertIn("--match-head-commit", commands[0])
+        self.assertIn("--delete-branch", commands[0])
         self.assertIn("tested", commands[0])
         self.assertEqual(commands[1][1:4], ["workflow", "run", "build.yml"])
+        self.assertEqual(commands[2][1:4], ["workflow", "run", "release.yml"])
 
     def test_stale_head_never_merges(self):
         self.pr["head"]["sha"] = "new-untested"

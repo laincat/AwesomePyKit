@@ -1,6 +1,6 @@
 # coding: utf-8
 
-REQ_FPVER = (1, 7, 1)  # 对 fastpip 的最低版本要求
+REQ_FPVER = (1, 7, 2)  # 对 fastpip 的最低版本要求
 
 # fastpip 已 vendored 到本仓库（src/fastpip/），随程序一起打包安装，不再是用户需要
 # 自行升级的第三方依赖。所以这项检查的用途变了：从「要求用户装对版本」变成
