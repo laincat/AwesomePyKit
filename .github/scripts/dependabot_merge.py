@@ -76,11 +76,14 @@ def main():
             print(f"PR #{number}: commit status incomplete or failed")
             continue
         subprocess.run(["gh", "pr", "merge", str(number), "--repo", repo,
-                        "--squash", "--match-head-commit", sha], check=True)
+                        "--squash", "--delete-branch",
+                        "--match-head-commit", sha], check=True)
         print(f"Merged PR #{number} after successful validation of {sha}")
         # GITHUB_TOKEN merges do not trigger push workflows. Dispatch the build
         # explicitly so the upgrade reaches the published output.
         subprocess.run(["gh", "workflow", "run", os.environ["POST_MERGE_WORKFLOW"],
+                        "--repo", repo, "--ref", pr["base"]["ref"]], check=True)
+        subprocess.run(["gh", "workflow", "run", "release.yml",
                         "--repo", repo, "--ref", pr["base"]["ref"]], check=True)
 
 

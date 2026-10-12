@@ -57,7 +57,7 @@ from awespykit.utils.thmt import *
 _version_error = check_fastpip_version(VERNUM)
 if _version_error:
     try:
-        _error_app = QApplication(sys.argv)
+        _error_app = QApplication.instance() or QApplication(sys.argv)
         QMessageBox.critical(
             None,
             f"{APP_NAME} 无法启动",

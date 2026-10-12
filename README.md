@@ -34,10 +34,10 @@
 
 ## 运行环境
 
-- **操作系统**：Windows 7 / 10 / 11
+- **操作系统**：Windows 10 / 11（当前 CI 与正式 exe 面向现代 Windows）
 - **Python**：3.9 或更高（用 exe 版则不需要装 Python）
 
-下限取 3.9 的原因：PyQt5-sip、chardet 等依赖的新版本已要求 3.10，pywin32 要求 3.9；而 Python 3.7 与 3.8 分别已于 2023、2024 年终止支持。用更低的 Python 版本时，pip 会直接提示版本不符，不会装出一个跑不起来的环境。
+Python 3.9 使用 chardet 5.x、pytest 8.x 与 build 1.4.x 等兼容系列；Python 3.10 及以上使用较新版本。依赖通过版本条件声明，pip 会自动选择。
 
 CI 覆盖 3.9 ~ 3.14，每个版本都实际跑测试。
 
@@ -51,17 +51,16 @@ CI 覆盖 3.9 ~ 3.14，每个版本都实际跑测试。
 想固定一个永远指向最新版的下载地址，可以用：
 
 ```
-https://github.com/laincat/AwesomePyKit/releases/download/dev-latest/Awespykit.exe
+https://github.com/laincat/AwesomePyKit/releases/latest/download/Awespykit.exe
 ```
 
-> 这个地址指向的是跟着 `main` 分支自动构建的开发版，可能包含尚未充分验证的改动。
-> 想要稳定版本请到 Releases 页面下载带版本号的那一份。
+> 这个地址始终指向最新正式版。Releases 只保留当前正式版，开发构建可在 Actions 附件中下载。
 
 ### 方式二：pip 安装
 
 > **先说结论：不能直接用 `pip install Awespykit`。**
 >
-> PyPI 上的 `Awespykit` 是原作者发布的，目前只到 **2.1.0**，不包含本仓库的修复。
+> PyPI 上的 `Awespykit` 是原作者发布的，属于原作者的发布渠道，不包含本仓库后续维护的修复。
 > 本仓库的版本要从下面两个地址装。
 
 **装最新版**（地址固定，不需要改）：
@@ -76,17 +75,17 @@ pip install git+https://github.com/laincat/AwesomePyKit.git@main
 **装指定版本**（不需要 git）：
 
 ```cmd
-pip install https://github.com/laincat/AwesomePyKit/releases/download/2.2.0/awespykit-2.2.0-py3-none-any.whl
+pip install https://github.com/laincat/AwesomePyKit/releases/download/2.3.3/awespykit-2.3.3-py3-none-any.whl
 ```
 
-这个地址里带版本号，升级到新版本时需要把 `2.2.0` 换成新版本号 —— 到
+这个地址里带版本号，升级到新版本时需要把 `2.3.3` 换成新版本号 —— 到
 [Releases 页面](https://github.com/laincat/AwesomePyKit/releases) 找到对应版本，
 右键复制 `awespykit-*.whl` 的链接即可。
 
 > 为什么没有「永久指向最新 wheel」的地址：pip 要求 wheel 文件名里必须包含版本号，
 > 所以附件名无法固定。这一点是 pip 的限制，不是本仓库的选择。
 
-两种方式都会由 pip 自动安装好依赖（PyQt5、fastpip、pywin32 等）。
+两种方式都会由 pip 自动安装好依赖（PyQt5、chardet、psutil、pywin32 等），fastpip 源码随本仓库分发包一起安装。
 
 安装完成后，在命令行输入 `rpk` 即可启动。如果提示 `rpk 不是内部或外部命令`，
 说明 Python 的 Scripts 目录没在 PATH 里，请自行添加，或用 `python -m awespykit` 启动。
@@ -254,30 +253,16 @@ tests/               测试
 
 ### 发布流程
 
-不需要本地打包，产物由 GitHub Actions 自动构建，分两种：
+不需要本地打包，产物由 GitHub Actions 自动构建。
 
-**开发版** —— 每次推送到 `main` 都自动构建并发布，版本号由 git 提交历史推导
-（形如 `2.2.1.dev3`）。它挂在固定的 tag `dev-latest` 下，每轮覆盖同名附件，
-所以下载地址恒定不变：
+- 推送到 `main` 或手动触发 `workflow_dispatch`：构建 wheel、sdist 与 Windows exe，完成启动检查后把产物保留在 Actions 附件中（14 天），不创建开发版 Release。
+- 正式发版：创建带版本号的 GitHub Release，例如 `2.3.3`。工作流按标签版本构建、检查 wheel 和 exe 版本一致、生成 SHA256 并上传附件。
+- 只有最新正式版的五个附件全部上传成功后，才自动删除旧版 Release 和对应 tag；构建失败或附件缺失时保留旧版。Releases 页面只保留最新正式版。
 
-```
-https://github.com/laincat/AwesomePyKit/releases/download/dev-latest/Awespykit.exe
-```
-
-开发版会标记为 Pre-release，也不会占用 `releases/latest` —— 那个位置留给正式发版。
-
-**正式发版** —— 在 GitHub 上创建 release（打 tag）即可，产物附件会补到那一条 release 上。
-标签需要是合法的版本号，例如 `v2.3.0`、`v2.3.0-rc1`；工作流会先把标签规范化为
-PEP 440 版本号，无法转换时会在第一步就明确报错指出问题。
-
-两种方式都会：构建 sdist 与 wheel → 构建 Windows 单文件 exe 并启动它做冒烟测试
-→ 计算全部产物的 SHA256 → 上传附件。
-
-只想验证打包配置、不发布时，手动触发工作流（`workflow_dispatch`）即可，
-产物只留在 Actions 的 artifact 里（保留 14 天）。
+安装本仓库版本请下载 Release 的 wheel，或从本仓库源码安装；`pip install Awespykit -U` 指向原作者的 PyPI 发布渠道。
 
 ### 依赖自动更新
 
-Dependabot 每周检查 `requirements*.txt` 与 workflow 里引用的 Action。
-patch 级更新会在 CI 通过后自动合并；minor 与 major 留给人看 ——
-这个项目要把 exe 发给真实用户，打包工具链的版本变化需要人工确认。
+Dependabot 每天检查依赖与 GitHub Actions。patch/minor 更新仅在 bot 提交签名、升级类型和该 PR 最新提交的 CI 检查全部满足条件时自动合并；major 更新或缺少可验证类型信息的更新需要人工审查。
+
+自动合并后删除源分支，并显式触发主分支 CI 与打包验证，避免 GitHub 的自动合并 token 不触发 push 工作流而漏掉检查。正式版仍按上面的发版流程发布。

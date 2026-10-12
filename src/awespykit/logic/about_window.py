@@ -1,4 +1,5 @@
 # coding: utf-8
+from importlib.metadata import metadata
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -18,6 +19,14 @@ class AboutWindow(Ui_about_window, QMainWindow):
         self.__parent = parent
         super().__init__(parent)
         self.setupUi(self)
+        chardet_license = metadata("chardet").get(
+            "License-Expression", "LGPL-2.1-or-later"
+        )
+        self.uiPlainTextEdit_open_packages.setPlainText(
+            self.uiPlainTextEdit_open_packages.toPlainText().replace(
+                "开源协议：LGPL-2.1 License", f"开源协议：{chardet_license}", 1
+            )
+        )
         self.setWindowFlags(Qt.Window | Qt.WindowCloseButtonHint)
         self.__v = appversion
         self.uiLabel_app_version.installEventFilter(self)
