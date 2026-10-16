@@ -873,7 +873,9 @@ class PyinstallerToolWindow(Ui_pyinstaller_tool, QMainWindow):
         # 所以只考虑删除 spec 文件，不删除自定义目录，以防误删其他无关文件
 
     def delete_working_dir(self):
-        thread = QThreadModel(self.pyi_tool.cleanup_workspace)
+        workspace = self.pyi_tool.owned_work
+        self.pyi_tool.owned_work = None
+        thread = QThreadModel(self.pyi_tool.cleanup_workspace, workspace)
         thread.start()
         self.thread_repo.put(thread)
 

@@ -239,11 +239,9 @@ VarFileInfo([VarStruct("Translation", [2052, 1200])]),
         self.__commands.extend(("--log-level", self.__log_level))
         self.__commands.append(commands.script_path)
 
-    def cleanup_workspace(self):
-        if self.owned_work is not None:
+    def cleanup_workspace(self, workspace):
+        if workspace is not None:
             try:
-                remove_owned_workspace(self.owned_work)
+                remove_owned_workspace(workspace)
             except (OSError, ValueError) as exc:
                 self.stdout.emit("临时目录清理失败，已保留目录：" + str(exc))
-            else:
-                self.owned_work = None

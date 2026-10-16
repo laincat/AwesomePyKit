@@ -187,6 +187,22 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(visitor.getresult(), {'requests', 'urllib3'})
         self.assertEqual(visitor.unsupported_dynamic_imports, [4, 5])
 
+    def test_cleanup_captures_workspace_before_thread_starts(self):
+        calls = []
+        class Worker:
+            def __init__(self, target, workspace):
+                self.target, self.workspace = target, workspace
+            def start(self):
+                # Model another build updating mutable tool state before execution.
+                tool.owned_work = "new workspace"
+                self.target(self.workspace)
+        tool = types.SimpleNamespace(owned_work="old workspace", cleanup_workspace=calls.append)
+        owner = types.SimpleNamespace(pyi_tool=tool, thread_repo=types.SimpleNamespace(put=lambda _: None))
+        cleanup = extract('src/awespykit/logic/pyinstaller_tool.py', 'PyinstallerToolWindow', 'delete_working_dir', {'QThreadModel': Worker})
+        cleanup(owner)
+        self.assertEqual(calls, ["old workspace"])
+        self.assertEqual(tool.owned_work, "new workspace")
+
     def test_config_loader_recovers_backup_and_exposes_error(self):
         config_class = extract('src/awespykit/settings/abstract_config.py', 'AbstractConfig', namespace={
             'Path': Path, 'config_root': '.', 'json': json,
