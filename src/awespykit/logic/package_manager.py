@@ -124,7 +124,9 @@ class PackageManagerWindow(Ui_package_manager, QMainWindow):
     def closeEvent(self, event: QCloseEvent):
         if not self.thread_repo.is_empty():
             if self.__stop_before_close():
-                self.thread_repo.stop_all()
+                if not self.thread_repo.stop_all():
+                    event.ignore()
+                    return
                 self.__output.close()
                 self.environ_changed_clear_pkgs()
                 event.accept()

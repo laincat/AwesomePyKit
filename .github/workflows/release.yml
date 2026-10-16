@@ -15,7 +15,7 @@ on:
         type: string
 
 permissions:
-  contents: write  # 创建 release、上传附件都需要
+  contents: read  # 构建无写权限；只有 publish 上传附件
 
 # 连续推送时串行执行；不取消进行中的，避免产物推到一半被中断
 concurrency:
@@ -27,6 +27,13 @@ env:
   INPUT_VERSION: ${{ inputs.version }}
 
 jobs:
+  validate:
+    name: Same-SHA supported Python and executable validation
+    if: github.event_name == 'release'
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   # ----------------------------------------------------------------
   # 1. Python 分发包（sdist + wheel）
   # ----------------------------------------------------------------
@@ -40,6 +47,7 @@ jobs:
         with:
           # setuptools_scm 从 git 标签推导版本号，浅克隆拿不到标签
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: actions/setup-python@v7
         with:
@@ -124,6 +132,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: actions/setup-python@v7
         with:
@@ -227,10 +236,14 @@ jobs:
   publish:
     name: 发布到 Release
     if: github.event_name == 'release'
-    needs: [build-python-dist, build-windows-exe]
+    needs: [validate, build-python-dist, build-windows-exe]
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@v8
         with:
           path: artifacts

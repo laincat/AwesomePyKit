@@ -1,7 +1,6 @@
 # coding: utf-8
 
 import os
-import shutil
 from platform import machine, platform
 from typing import *
 
@@ -874,23 +873,9 @@ class PyinstallerToolWindow(Ui_pyinstaller_tool, QMainWindow):
         # 所以只考虑删除 spec 文件，不删除自定义目录，以防误删其他无关文件
 
     def delete_working_dir(self):
-        program_name = self.__get_program_name()
-        custom_working_dir = self.config.current.working_dir
-        if not custom_working_dir:
-            working_dir_root = os.path.join(
-                self.config.current.program_root, "build"
-            )
-        elif not os.path.isabs(custom_working_dir):
-            working_dir_root = os.path.join(
-                self.config.current.program_root, custom_working_dir
-            )
-        else:
-            working_dir_root = os.path.join(custom_working_dir, program_name)
-        thread_delete_working = QThreadModel(
-            shutil.rmtree, working_dir_root, True
-        )
-        thread_delete_working.start()
-        self.thread_repo.put(thread_delete_working)
+        thread = QThreadModel(self.pyi_tool.cleanup_workspace)
+        thread.start()
+        self.thread_repo.put(thread)
 
     def after_task_completed(self, retcode):
         if retcode == 0:
@@ -1027,7 +1012,11 @@ class PyinstallerToolWindow(Ui_pyinstaller_tool, QMainWindow):
                 QMessageBox.Warning,
             ).exec_()
             return
-        self.pyi_tool.prepare_cmds(self.config.current)
+        try:
+            self.pyi_tool.prepare_cmds(self.config.current)
+        except (OSError, ValueError, SyntaxError) as exc:
+            MessageBox("错误", "打包配置无效：" + str(exc), QMessageBox.Critical).exec_()
+            return
         thread_build = QThreadModel(self.pyi_tool.execute_cmd)
         thread_build.before_starting(
             self.__lock_widgets,

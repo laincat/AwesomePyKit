@@ -5,6 +5,8 @@ import os
 import os.path as op
 import sys
 from pathlib import Path
+from ..safe_files import save_json_with_backup
+import warnings
 
 _frozen_program = getattr(sys, "frozen", False)
 if _frozen_program:
@@ -112,28 +114,27 @@ class AbstractConfig(dict):
         用户只会觉得「设置怎么没保存」。
         """
         try:
-            with open(self.__cfg, "wt", encoding="utf-8") as f:
-                json.dump(self, f, ensure_ascii=False)
+            save_json_with_backup(self.__cfg, self)
         except Exception:
             return False
         return True
 
     def __load_json(self):
-        """如果 __cfg 文件无法读取则返回空字典"""
+        self.load_error = None
         try:
-            if not self.root.exists():
-                self.root.mkdir(parents=True)
-        except Exception:
-            return
-        if not self.__cfg.exists():
-            try:
-                with open(self.__cfg, "wt", encoding="utf-8") as f:
-                    json.dump(dict(), f)
-            except Exception:
+            self.root.mkdir(parents=True, exist_ok=True)
+            if not self.__cfg.exists():
                 return
-        else:
+            content = json.loads(self.__cfg.read_text(encoding="utf-8"))
+            if not isinstance(content, dict):
+                raise ValueError("Settings must be a JSON object")
+            self.update(content)
+        except (OSError, ValueError, UnicodeError) as exc:
+            self.load_error = str(exc)
+            warnings.warn("Cannot load settings {}: {}".format(self.__cfg, exc), RuntimeWarning)
             try:
-                with open(self.__cfg, "rt", encoding="utf-8") as f:
-                    self.update(json.load(f))
-            except Exception:
-                return
+                backup = json.loads(Path(str(self.__cfg) + ".bak").read_text(encoding="utf-8"))
+                if isinstance(backup, dict):
+                    self.update(backup)
+            except (OSError, ValueError, UnicodeError):
+                pass

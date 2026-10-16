@@ -25,6 +25,7 @@
 ################################################################################
 
 import os
+import ast
 import re
 import shutil
 import time
@@ -40,6 +41,7 @@ if os.name != "nt":
 from ..__version__ import VERSION
 from ..com.common import *  # 一些常用量
 from ..utils.cmdutil import Command
+from ..utils.process import run_process
 from ..utils.findpath import cur_py_path
 
 _INIT_WK_DIR = os.getcwd()
@@ -112,7 +114,7 @@ def execute_commands(
     """
     ### 执行命令，打印命令输出，返回输出字符串和结束状态码。
 
-    请注意，如果 output 参数值为 True，则 timeout 参数不生效。
+    timeout 在静默和输出模式下均生效，超时会终止并回收子进程。
 
     ```python
     :param cmds: Command, 要执行的命令，详见 Command 类的文档
@@ -121,36 +123,16 @@ def execute_commands(
     :return: Tuple[str, int], 命令执行时输出的全部字符串和退出状态码
     ```
     """
-    env = cmds.environment()
-    cwd = os.path.dirname(cmds.executable)
-    process = Popen(
-        cmds,
-        stdout=PIPE,
-        stderr=STDOUT,
-        startupinfo=_STARTUP,
-        cwd=cwd,
-        env=env,
+    def emit(data):
+        if output:
+            print(decode_bytes(data) or "", end="")
+
+    data, code = run_process(
+        cmds, callback=emit if output else None, timeout=timeout,
+        startupinfo=_STARTUP, cwd=os.path.dirname(cmds.executable),
+        env=cmds.environment(),
     )
-    if output:
-        strings = list()
-        while process.poll() is None:
-            line_bytes = process.stdout.readline()
-            decoded_line = decode_bytes(line_bytes)
-            if decoded_line:
-                strings.append(decoded_line)
-                if output:
-                    print(decoded_line, end="")
-        out_strings = "".join(strings)
-        return_code = process.returncode
-    else:
-        try:
-            out_bytes, _ = process.communicate(None, timeout)
-            return_code = process.returncode
-            out_strings = decode_bytes(out_bytes)
-        except:
-            return_code = 1
-            out_strings = EMPTY_STR
-    return out_strings.replace("\r\n", "\n"), return_code
+    return (decode_bytes(data) or "").replace("\r\n", "\n"), code
 
 
 def parse_package_names(names):
@@ -193,38 +175,18 @@ class PyEnv:
     __module_pattern = re.compile(r"^([A-Z0-9_]+).*(?<!_d)\.py[cdw]?$", re.I)
 
     def __execute(self, cmds: Command, output, timeout):
-        env = cmds.environment()
-        cwd = os.path.dirname(cmds.executable)
-        process = Popen(
-            cmds,
-            stdout=PIPE,
-            stderr=STDOUT,
-            startupinfo=_STARTUP,
-            cwd=cwd,
-            env=env,
+        def emit(data):
+            line = decode_bytes(data) or ""
+            if output:
+                print(line, end="")
+            for callback in tuple(self.__CLS_CALLBACK_DICT.values()):
+                callback(line.rstrip(os.linesep))
+
+        data, code = run_process(
+            cmds, callback=emit, timeout=timeout, startupinfo=_STARTUP,
+            cwd=os.path.dirname(cmds.executable), env=cmds.environment(),
         )
-        if not output and not self.__CLS_CALLBACK_DICT:
-            try:
-                out_bytes, _ = process.communicate(None, timeout)
-                return_code = process.returncode
-                out_strings = decode_bytes(out_bytes)
-            except:
-                return_code = 1
-                out_strings = EMPTY_STR
-        else:
-            strings = list()
-            while process.poll() is None:
-                line_bytes = process.stdout.readline()
-                decoded_line = decode_bytes(line_bytes)
-                if decoded_line:
-                    strings.append(decoded_line)
-                    if output:
-                        print(decoded_line, end="")
-                    for callback in self.__CLS_CALLBACK_DICT.values():
-                        callback(decoded_line.rstrip(os.linesep))
-            out_strings = "".join(strings)
-            return_code = process.returncode
-        return out_strings.replace("\r\n", "\n"), return_code
+        return (decode_bytes(data) or "").replace("\r\n", "\n"), code
 
     def __init__(self, path=None):
         """
@@ -533,7 +495,7 @@ class PyEnv:
         """
         ### 获取该 Python 目录下已安装的包列表，列表包含(包名, 版本)元组，没有获取到则返回空列表。
 
-        请注意，如果 output 参数值为 True，则 timeout 参数不生效。
+        timeout 在静默和输出模式下均生效，超时会终止并回收子进程。
 
         ```
         :param output: bool, 在终端上显示命令输出，默认 False。
@@ -561,7 +523,7 @@ class PyEnv:
         """
         ### 获取该 Python 目录下已安装的包名列表，没有获取到包名列表则返回空列表。
 
-        请注意，如果 output 参数值为 True，则 timeout 参数不生效。
+        timeout 在静默和输出模式下均生效，超时会终止并回收子进程。
 
         ```
         :param output: bool, 在终端上显示命令输出，默认 False。
@@ -593,7 +555,7 @@ class PyEnv:
 
         检查更新时，耗时多少与环境中已安装的包数量有关，也与 PyPi 镜像地址的连通流畅度有关，请耐心等待。
 
-        请注意，如果 output 参数值为 True，则 timeout 参数不生效。
+        timeout 在静默和输出模式下均生效，超时会终止并回收子进程。
 
         ```
         :param output: bool, 在终端上显示命令输出，默认 False。
@@ -634,7 +596,7 @@ class PyEnv:
         """
         ### 升级 pip。
 
-        请注意，如果 output 参数值为 True，则 timeout 参数不生效。
+        timeout 在静默和输出模式下均生效，超时会终止并回收子进程。
 
         ```
         :param index_url: str, 镜像源地址，可为空字符串，默认使用系统内设置的全局镜像源。
@@ -708,7 +670,7 @@ class PyEnv:
 
         所以如果不能保证 names 中所有的包都能被安装，那最好每次只传入一个包名，循环调用 install 方法安装所有的包。
 
-        请注意，如果 output 参数值为 True，则 timeout 参数不生效。
+        timeout 在静默和输出模式下均生效，超时会终止并回收子进程。
 
         ```
         :param names: str, 第三方包名(可变数量参数)。
@@ -807,7 +769,7 @@ class PyEnv:
         """
         ### 卸载 Python 第三方包。
 
-        请注意，如果 output 参数值为 True，则 timeout 参数不生效。
+        timeout 在静默和输出模式下均生效，超时会终止并回收子进程。
 
         ```
         param names: str, 不定长参数。要卸载的包名，可以传入多个包名，此参数必选。
@@ -842,7 +804,7 @@ class PyEnv:
 
         提示：当使用 python_version、platform、abis 或 implementation 参数约束平台和解释器时，必须设置 no_deps 参数值为 True，不能设置 only_binary 参数，不能设置 no_binary 参数。
 
-        请注意，如果 output 参数值为 True，则 timeout 参数不生效。
+        timeout 在静默和输出模式下均生效，超时会终止并回收子进程。
 
         ```
         :param names: str, 不定长参数。包名，可同时传入多个包名，此参数必选。
@@ -919,14 +881,14 @@ class PyEnv:
             raise TypeError("no_binary 参数值的数据类型应为 'tuple'、'list' 或值为 'None'。")
         if not (
             isinstance(no_binary, NoneType)
-            or all(n in clean_package_name for n in no_binary)
+            or all(n == ":all:" or n in clean_package_name for n in no_binary)
         ):
             raise ValueError("no_binary 参数值不应包含不在 names 中的包名(不包含版本限制符号)。")
         if not isinstance(only_binary, (tuple, list, NoneType)):
             raise TypeError("only_binary 参数值的数据类型应为 'tuple'、'list' 或值为 'None'。")
         if not (
             isinstance(only_binary, NoneType)
-            or all(n in clean_package_name for n in only_binary)
+            or all(n == ":all:" or n in clean_package_name for n in only_binary)
         ):
             raise ValueError("only_binary 参数值不应包含不在 names 中的包名(不包含版本限制符号)。")
         if not isinstance(dest, (str, NoneType)):
@@ -1012,7 +974,7 @@ class PyEnv:
             return [], ()
         try:
             paths, builtins = result.strip().split("\n")
-            return eval(paths.strip()), eval(builtins.strip())
+            return ast.literal_eval(paths.strip()), ast.literal_eval(builtins.strip())
         except Exception:
             return [], ()
 
@@ -1487,8 +1449,11 @@ class PyEnv:
         str_matched = self.__sitepkg_pattern.search(string)
         if str_matched is None:
             return EMPTY_STR
-        site_list: List[str] = eval(str_matched.group())
-        if not isinstance(site_list, list):
+        try:
+            site_list = ast.literal_eval(str_matched.group())
+        except (ValueError, SyntaxError):
+            return EMPTY_STR
+        if not isinstance(site_list, list) or not all(isinstance(s, str) for s in site_list):
             return EMPTY_STR
         for site_string in site_list:
             if site_string.lower().endswith(SITEPKG_NAME.lower()):

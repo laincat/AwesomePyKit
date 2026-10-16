@@ -295,18 +295,19 @@ class PackageDownloadWindow(Ui_package_download, QMainWindow, QueryFilePath):
 
         def unqualified():
             return (
-                not configure.get("no_deps", False)
-                or configure.get("no_binary", False)
-                or configure.get("only_binary", False)
+                bool(configure.get("no_binary")) or (
+                    not configure.get("no_deps", False)
+                    and configure.get("only_binary") != [":all:"]
+                )
             )
 
         if not self.config.download_deps:
             configure.update(no_deps=True)
         download_type = self.config.download_type
         if download_type == "no_binary":
-            configure.update(no_binary=parse_package_names(names))
+            configure.update(no_binary=[":all:"])
         elif download_type == "only_binary":
-            configure.update(only_binary=parse_package_names(names))
+            configure.update(only_binary=[":all:"])
         elif download_type == "prefer_binary":
             configure.update(prefer_binary=True)
         if self.config.include_pre:
@@ -322,17 +323,17 @@ class PackageDownloadWindow(Ui_package_download, QMainWindow, QueryFilePath):
                 return MessageBox(
                     "提示",
                     "设置'兼容平台'后，不能勾选'下载需要下载的包的依赖库'，\
-不能选择'仅选择源代码包'或'仅选择二进制包'。",
+请选择'仅选择二进制包'，或关闭依赖下载且不选择源代码包。",
                     QMessageBox.Warning,
                 ).exec_()
-            configure.update(platform=platform_name)
+            configure.update(platform=[platform_name])
         python_version = self.config.python_version
         if python_version:
             if unqualified():
                 return MessageBox(
                     "提示",
                     "设置'兼容 Python 版本'后，不能勾选'下载需要下载的包的依赖库'，\
-不能选择'仅选择源代码包'或'仅选择二进制包'。",
+请选择'仅选择二进制包'，或关闭依赖下载且不选择源代码包。",
                     QMessageBox.Warning,
                 ).exec_()
             configure.update(python_version=python_version)
@@ -344,7 +345,7 @@ class PackageDownloadWindow(Ui_package_download, QMainWindow, QueryFilePath):
                 return MessageBox(
                     "提示",
                     "设置'兼容解释器实现'后，不能勾选'下载需要下载的包的依赖库'，\
-不能选择'仅选择源代码包'或'仅选择二进制包'。",
+请选择'仅选择二进制包'，或关闭依赖下载且不选择源代码包。",
                     QMessageBox.Warning,
                 ).exec_()
             configure.update(implementation=impl_name)
@@ -354,7 +355,7 @@ class PackageDownloadWindow(Ui_package_download, QMainWindow, QueryFilePath):
                 return MessageBox(
                     "提示",
                     "设置'兼容ABI'后，不能勾选'下载需要下载的包的依赖库'，\
-不能选择'仅选择源代码包'或'仅选择二进制包'。",
+请选择'仅选择二进制包'，或关闭依赖下载且不选择源代码包。",
                     QMessageBox.Warning,
                 ).exec_()
             if not (platform_name and python_version and impl_name):

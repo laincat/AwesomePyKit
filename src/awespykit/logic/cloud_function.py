@@ -1,7 +1,7 @@
 # coding: utf-8
 
 import os
-import zipfile
+from ..safe_files import atomic_zip, filtered_files
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import *
@@ -535,40 +535,19 @@ class CloudFunctionWindow(Ui_cloud_function, QMainWindow, QueryFilePath):
                 for index, name in enumerate(requirements):
                     self.signal_reqinstalled.emit(index, name, result)
             self.signal_show_workingtips.emit("开始创建压缩文件...")
-            compressed_arcnames: Dict[Path, Path] = dict()
-            exclude_paths = [Path(generated_dir).resolve()]
             try:
-                with zipfile.ZipFile(
-                    generated_file, "w", zipfile.ZIP_DEFLATED
-                ) as binary_file:
-                    if workingdir_type != WorkDir.Project:
-                        filtered_filepaths = self.__filtered_files(
-                            Path(projectdir),
-                            exclude_paths + [Path(requires_install_path)],
-                        )
-                    else:
-                        filtered_filepaths = self.__filtered_files(
-                            Path(projectdir), exclude_paths
-                        )
-                    for _path in filtered_filepaths:
-                        arcfilename = _path.relative_to(projectdir)
-                        binary_file.write(_path, arcfilename)
-                        compressed_arcnames[arcfilename] = _path
-                    if workingdir_type != WorkDir.Project:
-                        for _path in self.__filtered_files(
-                            Path(requires_install_path), exclude_paths
-                        ):
-                            arcfilename = _path.relative_to(
-                                requires_install_path
-                            )
-                            if arcfilename in compressed_arcnames:
-                                self.signal_packing.emit(
-                                    False,
-                                    f"继续打包将使以下文件将在压缩包内重复，请处理：\n"
-                                    f"{compressed_arcnames[arcfilename]!s}\n{_path!s}",
-                                )
-                                return
-                            binary_file.write(_path, arcfilename)
+                project = Path(projectdir).resolve()
+                dependencies = Path(requires_install_path).resolve()
+                excluded = [
+                    Path(p) if Path(p).is_absolute() else project / p
+                    for p in self.config.current.excluded_paths
+                ]
+                sources = [(project, [])]
+                if workingdir_type != WorkDir.Project:
+                    if dependencies == project or dependencies in project.parents:
+                        raise ValueError("Dependency directory must not equal or contain the source project")
+                    sources = [(project, [dependencies]), (dependencies, [])]
+                atomic_zip(generated_file, sources, excluded)
             except Exception as e:
                 self.signal_packing.emit(False, f"创建压缩文件出错：\n{e}")
                 return
@@ -591,25 +570,12 @@ class CloudFunctionWindow(Ui_cloud_function, QMainWindow, QueryFilePath):
     def __filtered_files(
         self, _path: Path, prev_excludeds: List[Path]
     ) -> Generator[Path, None, None]:
-        previous_cwd = os.getcwd()
-        try:
-            os.chdir(_path)
-            prev_excludeds.extend(
-                Path(apath).resolve()
-                for apath in self.config.current.excluded_paths
-            )
-            for afile in _path.rglob("*"):
-                if not afile.is_file():
-                    continue
-                for excluded in prev_excludeds:
-                    if excluded.is_file() and afile.samefile(excluded):
-                        break
-                    elif excluded.is_dir() and excluded in afile.parents:
-                        break
-                else:
-                    yield afile
-        finally:
-            os.chdir(previous_cwd)
+        root = _path.resolve()
+        excludes = list(prev_excludeds) + [
+            Path(p) if Path(p).is_absolute() else root / p
+            for p in self.config.current.excluded_paths
+        ]
+        yield from filtered_files(root, excludes)
 
     def __set_requirement_install_result(
         self, index: int, name: str, res: bool

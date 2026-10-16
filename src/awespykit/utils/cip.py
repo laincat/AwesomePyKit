@@ -20,6 +20,7 @@ except ImportError:  # pragma: no cover - 兼容 chardet 4.x
 
 class FindImport(ast.NodeVisitor):
     def __init__(self, out=None):
+        self.unsupported_dynamic_imports = []
         if isinstance(out, set):
             self.__result = out
         else:
@@ -42,15 +43,23 @@ class FindImport(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_Call(self, node):
-        if isinstance(node.func, ast.Name):
-            if node.func.id == "__import__":
-                self.add_call_node_arg(node.args[0])
-        elif isinstance(node.func, ast.Attribute):
-            attr = node.func.attr
-            name = node.func.value
-            if isinstance(name, ast.Name) and name.id == "importlib":
-                if attr == "__import__" or attr == "import_module":
-                    self.add_call_node_arg(node.args[0])
+        dynamic = (
+            isinstance(node.func, ast.Name) and node.func.id == "__import__"
+        ) or (
+            isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "importlib"
+            and node.func.attr in ("__import__", "import_module")
+        )
+        if dynamic:
+            arg = node.args[0] if node.args else next(
+                (kw.value for kw in node.keywords if kw.arg == "name"), None
+            )
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                if arg.value and not arg.value.startswith("."):
+                    self.add_call_node_arg(arg)
+            else:
+                self.unsupported_dynamic_imports.append(node.lineno)
         self.generic_visit(node)
 
     def getresult(self):

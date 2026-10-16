@@ -3,12 +3,16 @@
 __doc__ = """包含 pyinstaller 工具相关的类或函数。"""
 
 import os
+import ast
+import re
+from ..safe_files import owned_workspace, remove_owned_workspace
 from subprocess import *
 from typing import *
 
 from ..__info__ import *
 from ..com import *
 from fastpip import PyEnv, decode_bytes
+from fastpip.utils.process import run_process
 from PyQt5.QtCore import *
 from ..settings import *
 
@@ -37,6 +41,7 @@ class PyiTool(QObject):
         self.__pyenv: Union[PyEnv, None] = None
         self.__cwd = None
         self.__process = None
+        self.owned_work = None
         self.__commands = None
         self.initialize(pyenv, cwd)
         self.cumulative = -200
@@ -87,71 +92,21 @@ class PyiTool(QObject):
             self.__qtimer.stop()
             self.cumulative = -200
 
-    def __line_division_emit(self):
-        while self.__process.poll() is None:
-            try:
-                line_bytes = self.__process.stdout.readline()
-                decoded_line = decode_bytes(line_bytes)
-                if decoded_line is not None:
-                    decoded_line = decoded_line.strip(os.linesep)
-                    if decoded_line:
-                        self.stdout.emit(decoded_line)
-            except Exception as e:
-                self.stdout.emit(f"[{APP_NAME}] 信息流读取异常(不影响打包)：\n    {e}")
-        self.completed.emit(self.__process.wait())
-
-    def __time_division_emit(self):
-        self.run_time.emit(1)
-        lines = list()
-        while self.__process.poll() is None:
-            try:
-                line_bytes = self.__process.stdout.readline()
-                decoded_line = decode_bytes(line_bytes)
-                if decoded_line is not None:
-                    decoded_line = decoded_line.strip(os.linesep)
-                    if decoded_line:
-                        lines.append(decoded_line)
-                if self.cumulative > 100:
-                    self.stdout.emit("\n".join(lines))
-                    lines.clear()
-                    self.cumulative = 0
-            except Exception as e:
-                self.stdout.emit(f"[{APP_NAME}] 信息流读取异常(不影响打包)：\n    {e}")
-        if lines:
-            self.stdout.emit("\n".join(lines))
-        self.run_time.emit(0)
-        self.completed.emit(self.__process.wait())
-
     def execute_cmd(self):
-        """执行命令并读取输出流，通过信号发射字符串、返回码更新主界面面板。"""
-        try:
-            self.__process = Popen(
-                self.__commands,
-                stdin=PIPE,
-                stdout=PIPE,
-                stderr=STDOUT,
-                startupinfo=self.STARTUP,
-                cwd=self.__cwd,
-            )
-        except OSError as e:
-            # 解释器路径失效、工作目录被删、权限不足等。原实现没有捕获，
-            # 异常会在 QThread 里抛出，界面上只看到打包按钮点不动、日志空白。
-            self.__process = None
-            self.stdout.emit(
-                f"[{APP_NAME}] 无法启动打包进程：{e}\n"
-                "请确认所选 Python 环境仍然存在，且工作目录有效。"
-            )
-        if self.__commands and self.__process:
-            if self.__log_level == "TRACE":
-                self.__time_division_emit()
-            else:
-                self.__line_division_emit()
-        else:
-            if not self.__commands:
-                self.stdout.emit("当前环境中找不到 PyInstaller 模块。")
-            if self.__process is None:
-                self.stdout.emit("创建打包进程失败，无法完成程序打包。")
+        """Run the owned build, draining output even after immediate exit."""
+        if not self.__commands:
+            self.stdout.emit("当前环境中找不到 PyInstaller 模块。")
             self.completed.emit(-1)
+            return
+        try:
+            _, code = run_process(
+                self.__commands, startupinfo=self.STARTUP, cwd=self.__cwd,
+                callback=lambda data: self.stdout.emit((decode_bytes(data) or "").rstrip()),
+            )
+        except Exception as exc:
+            self.stdout.emit("无法完成打包：" + str(exc))
+            code = -1
+        self.completed.emit(code)
 
     @staticmethod
     def __generate_infofile(verinfo_dict):
@@ -185,8 +140,20 @@ VarFileInfo([VarStruct("Translation", [2052, 1200])]),
 )
 """
         file_path = os.path.join(config_root, "VERSION_INFO")
-        for key, val in verinfo_dict.items():
-            version_info = version_info.replace(key, val)
+        def replacement(match):
+            key = match.group(0)
+            if key in ("$filevers$", "$prodvers$"):
+                value = ast.literal_eval(verinfo_dict[key])
+                if not isinstance(value, tuple) or len(value) != 4 or not all(
+                    type(n) is int and 0 <= n <= 65535 for n in value
+                ):
+                    raise ValueError("Invalid Windows version tuple")
+                return repr(value)
+            return repr(str(verinfo_dict.get(key, "")))
+
+        # Replace the whole string literal, once, so embedded placeholders stay data.
+        version_info = re.sub(r'"(\$[A-Za-z]+\$)"', r'\1', version_info)
+        version_info = re.sub(r'\$[A-Za-z]+\$', replacement, version_info)
         try:
             with open(file_path, "wt", encoding="utf-8") as f:
                 f.write(version_info)
@@ -206,6 +173,10 @@ VarFileInfo([VarStruct("Translation", [2052, 1200])]),
 
     def prepare_cmds(self, commands: PyiConfigure):
         """从 commands 添加 PyInstaller 命令选项。"""
+        self.owned_work = None
+        name = commands.bundle_spec_name
+        if name and (name in (".", "..") or "/" in name or "\\" in name or ":" in name):
+            raise ValueError("Program name must not contain path components")
         self.__log_level = commands.log_level
         if commands.onedir_bundle:
             self.__commands.append("-D")
@@ -239,7 +210,14 @@ VarFileInfo([VarStruct("Translation", [2052, 1200])]),
             self.__commands.extend(("-i", commands.icon_path))
         if commands.distribution_dir:
             self.__commands.extend(("--distpath", commands.distribution_dir))
-        if commands.working_dir:
+        if commands.delete_working_dir:
+            parent = commands.working_dir or "build"
+            if not os.path.isabs(parent):
+                parent = os.path.join(self.__cwd, parent)
+            self.owned_work = owned_workspace(parent, self.__cwd)
+            self.__commands.extend(("--workpath", str(self.owned_work[0])))
+            self.stdout.emit("本次独占临时目录（成功后清理）：" + str(self.owned_work[0]))
+        elif commands.working_dir:
             self.__commands.extend(("--workpath", commands.working_dir))
         info_path = self.__generate_infofile(commands.version_info)
         if commands.add_verfile and info_path:
@@ -260,3 +238,12 @@ VarFileInfo([VarStruct("Translation", [2052, 1200])]),
             self.__commands.append("--uac-admin")
         self.__commands.extend(("--log-level", self.__log_level))
         self.__commands.append(commands.script_path)
+
+    def cleanup_workspace(self):
+        if self.owned_work is not None:
+            try:
+                remove_owned_workspace(self.owned_work)
+            except (OSError, ValueError) as exc:
+                self.stdout.emit("临时目录清理失败，已保留目录：" + str(exc))
+            else:
+                self.owned_work = None

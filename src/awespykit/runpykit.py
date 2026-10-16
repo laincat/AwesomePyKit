@@ -129,11 +129,16 @@ class MainEntrance(Ui_main_entrance, QMainWindow):
                 self,
             ).exec_()
             if user_messagebox_role == 0:
-                self.__pkgdl_win.thread_repo.kill_all()
-                self.__pkgmgr_win.thread_repo.kill_all()
-                self.__pyitool_win.thread_repo.kill_all()
-                self.__cloudfunction_win.thread_repo.kill_all()
-                event.accept()
+                stopped = [
+                    window.thread_repo.kill_all() for window in (
+                        self.__pkgdl_win, self.__pkgmgr_win,
+                        self.__pyitool_win, self.__cloudfunction_win,
+                    )
+                ]
+                if all(stopped):
+                    event.accept()
+                else:
+                    event.ignore()
             else:
                 event.ignore()
         self.__store_window_size()
