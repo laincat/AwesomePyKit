@@ -137,6 +137,30 @@ class FilesTests(unittest.TestCase):
 
 
 class ProcessTests(unittest.TestCase):
+    def test_windows_job_uses_unique_string_name_and_owns_handle(self):
+        names, assigned, closed = [], [], []
+        def create(security, name):
+            self.assertIsInstance(name, str)
+            self.assertTrue(name)
+            names.append(name)
+            return len(names)
+        api = types.SimpleNamespace(CloseHandle=closed.append)
+        job_api = types.SimpleNamespace(
+            CreateJobObject=create,
+            QueryInformationJobObject=lambda *a: {"BasicLimitInformation": {"LimitFlags": 0}},
+            SetInformationJobObject=lambda *a: None,
+            AssignProcessToJobObject=lambda *a: assigned.append(a),
+            JobObjectExtendedLimitInformation=9, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE=8192,
+        )
+        with patch.dict(sys.modules, win32api=api, win32job=job_api):
+            for _ in range(2):
+                job = process._WindowsJob(types.SimpleNamespace(_handle=123))
+                job.close()
+                job.close()
+        self.assertNotEqual(names[0], names[1])
+        self.assertEqual(assigned, [(1, 123), (2, 123)])
+        self.assertEqual(closed, [1, 2])
+
     def test_immediate_exit_large_unicode_and_failure_tail(self):
         for callback_mode in (False, True):
             lines = []
@@ -170,6 +194,14 @@ class ProcessTests(unittest.TestCase):
                     self.assertEqual(process.run_process(['unused']), (b'', 1))
         finally:
             timer.join()
+
+    def test_fast_parent_exit_does_not_escape_process_tree(self):
+        script = "import subprocess,sys; subprocess.Popen([sys.executable,'-c','import time; time.sleep(60)']); print('spawned',flush=True)"
+        started = time.monotonic()
+        data, code = process.run_process([sys.executable, '-c', script], timeout=0.5)
+        self.assertEqual(code, 1)
+        self.assertIn(b'spawned', data)
+        self.assertLess(time.monotonic() - started, 20)
 
     def test_timeout_kills_descendant_holding_pipe(self):
         script = "import subprocess,sys,time; subprocess.Popen([sys.executable,'-c','import time; time.sleep(60)']); print('spawned',flush=True); time.sleep(60)"

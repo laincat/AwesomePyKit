@@ -6,6 +6,7 @@ import signal
 import subprocess
 import threading
 import time
+import uuid
 
 _context = threading.local()
 
@@ -26,7 +27,7 @@ class _WindowsJob:
         import win32api
         import win32job
         self.api, self.job_api = win32api, win32job
-        self.handle = win32job.CreateJobObject(None, None)
+        self.handle = win32job.CreateJobObject(None, "Awespykit-" + uuid.uuid4().hex)
         try:
             info = win32job.QueryInformationJobObject(
                 self.handle, win32job.JobObjectExtendedLimitInformation
@@ -47,6 +48,23 @@ class _WindowsJob:
         if self.handle is not None:
             self.api.CloseHandle(self.handle)
             self.handle = None
+
+
+def _resume_windows_process(process):
+    import psutil
+    import win32api
+    import win32process
+    # Popen closes the primary thread handle. A suspended new process has
+    # exactly its initial thread; reopen only that owned process's thread.
+    threads = psutil.Process(process.pid).threads()
+    if len(threads) != 1:
+        raise RuntimeError("Unexpected threads in suspended child")
+    thread = win32api.OpenThread(0x0002, False, threads[0].id)
+    try:
+        if win32process.ResumeThread(thread) != 1:
+            raise RuntimeError("Child primary thread was not suspended exactly once")
+    finally:
+        win32api.CloseHandle(thread)
 
 
 def _terminate_tree(process, job=None):
@@ -80,7 +98,10 @@ def run_process(args, *, callback=None, timeout=None, cancel=None, **kwargs):
     if cancel is not None and cancel.is_set():
         return b"", 1
     if os.name == "nt":
-        kwargs.setdefault("creationflags", subprocess.CREATE_NEW_PROCESS_GROUP)
+        kwargs["creationflags"] = (
+            kwargs.get("creationflags", 0)
+            | subprocess.CREATE_NEW_PROCESS_GROUP | 0x00000004  # CREATE_SUSPENDED
+        )
     else:
         kwargs.setdefault("start_new_session", True)
     process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kwargs)
@@ -88,13 +109,21 @@ def run_process(args, *, callback=None, timeout=None, cancel=None, **kwargs):
     if os.name == "nt":
         try:
             job = _WindowsJob(process)
+            _resume_windows_process(process)
         except Exception:
-            # An immediately completed child needs no assignment. If a live
-            # child cannot be contained, fail closed instead of running unowned.
-            if process.poll() is None:
-                _terminate_tree(process)
+            # No child code runs before containment. Fail closed, including
+            # unexpected thread enumeration/resume errors.
+            try:
+                if job is not None:
+                    _terminate_tree(process, job)
+                else:
+                    process.kill()
+                    process.wait()
+            finally:
+                if job is not None:
+                    job.close()
                 process.stdout.close()
-                raise
+            raise
     events = queue.Queue()
 
     def read():
