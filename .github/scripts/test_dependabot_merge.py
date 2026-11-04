@@ -1,6 +1,7 @@
 import copy
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -101,7 +102,7 @@ class MergeGateTests(unittest.TestCase):
             "check_runs": [{"status": "completed", "conclusion": "success"}],
         }
 
-    def run_gate(self):
+    def run_gate(self, command_side_effect=None):
         def fake_api(endpoint):
             if endpoint.endswith("/pulls?per_page=100"):
                 return [self.pr]
@@ -122,7 +123,8 @@ class MergeGateTests(unittest.TestCase):
                 "GITHUB_EVENT_PATH": str(path), "GITHUB_REPOSITORY": self.repo,
                 "POST_MERGE_WORKFLOW": "build.yml",
             }), patch("dependabot_merge.api", side_effect=fake_api), \
-                    patch("dependabot_merge.subprocess.run") as command:
+                    patch("dependabot_merge.subprocess.run",
+                          side_effect=command_side_effect) as command:
                 main()
                 return [call.args[0] for call in command.call_args_list]
 
@@ -134,6 +136,16 @@ class MergeGateTests(unittest.TestCase):
         self.assertIn("tested", commands[0])
         self.assertEqual(commands[1][1:4], ["workflow", "run", "build.yml"])
         self.assertEqual(commands[2][1:4], ["workflow", "run", "release.yml"])
+
+    def test_merge_race_is_skipped_not_fatal(self):
+        # 检查通过后 Dependabot 又推了新提交，gh pr merge 会因头提交不匹配失败。
+        def fail_merge(*args, **kwargs):
+            raise subprocess.CalledProcessError(
+                1, args[0], "", "X Pull request was modified")
+
+        commands = self.run_gate(fail_merge)
+        self.assertEqual(len(commands), 1)
+        self.assertIn("pr", commands[0])
 
     def test_stale_head_never_merges(self):
         self.pr["head"]["sha"] = "new-untested"
