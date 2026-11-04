@@ -90,9 +90,19 @@ def main():
         if status["total_count"] and status["state"] != "success":
             print(f"PR #{number}: commit status incomplete or failed")
             continue
-        subprocess.run(["gh", "pr", "merge", str(number), "--repo", repo,
-                        "--squash", "--delete-branch",
-                        "--match-head-commit", sha], check=True)
+        try:
+            subprocess.run(["gh", "pr", "merge", str(number), "--repo", repo,
+                            "--squash", "--delete-branch",
+                            "--match-head-commit", sha], check=True,
+                           capture_output=True, text=True)
+        except subprocess.CalledProcessError as error:
+            # 头提交可能在“检查完成”和“执行合并”之间又变了（Dependabot 重新
+            # 推送），也可能已被别的流程合掉：这一轮跳过，等下一次调度重新
+            # 校验，不要让整轮门禁变红。
+            detail = (error.stderr or error.stdout or "").strip().splitlines()
+            print(f"PR #{number}: merge skipped: "
+                  f"{detail[-1] if detail else error.returncode}")
+            continue
         print(f"Merged PR #{number} after successful validation of {sha}")
         # GITHUB_TOKEN merges do not trigger push workflows. Dispatch the build
         # explicitly so the upgrade reaches the published output.
